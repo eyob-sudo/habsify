@@ -1,0 +1,8 @@
+{
+    "python-envs.defaultEnvManager": "ms-python.python:system",
+    "python-envs.pythonProjects": [],
+    "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
+    "cSpell.words": [
+        "habsify"
+    ]
+}

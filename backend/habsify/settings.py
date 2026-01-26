@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'habsify.wsgi.application'
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.postgresql",
-        "NAME": config("POSTGRES_DB", default="habsify"),
+        "NAME": config("POSTGRES_DB", default="habsify_db"),
         "USER": config("POSTGRES_USER", default="habsify_user"),
         "PASSWORD": config("POSTGRES_PASSWORD", default="habsify_password"),
         "HOST": config("POSTGRES_HOST", default="db"),

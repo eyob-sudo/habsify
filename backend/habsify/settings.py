@@ -21,7 +21,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-(p18rv_tc95#qp#1r#)68ux6#wc_@t9%(gshdhdxo56i(z5a-u'
+SECRET_KEY = 'RidxRjwqclea2aN&$!v^0[{Q]*x&#mG.:CFNQYZngo-insecure-(p18rv_tc95#qp#1r#)68ux6#wc_@t9%(gshdhdxo56i(z5a-u'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -79,7 +79,7 @@ DATABASES = {
         "NAME": config("POSTGRES_DB", default="habsify"),
         "USER": config("POSTGRES_USER", default="habsify_user"),
         "PASSWORD": config("POSTGRES_PASSWORD", default="habsify_password"),
-        "HOST": config("POSTGRES_HOST", default="localhost"),
+        "HOST": config("POSTGRES_HOST", default="db"),
         "PORT": config("POSTGRES_PORT", default="5432"),
     }
 }

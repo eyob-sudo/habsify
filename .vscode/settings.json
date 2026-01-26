@@ -3,6 +3,7 @@
     "python-envs.pythonProjects": [],
     "python.defaultInterpreterPath": "${workspaceFolder}/backend/.venv/bin/python",
     "cSpell.words": [
+        "djoser",
         "habsify"
     ]
 }

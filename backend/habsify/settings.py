@@ -26,12 +26,12 @@ SECRET_KEY = config("SECRET_KEY")
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
 
 # Application definition
 
-INSTALLED_APPS = [   
+INSTALLED_APPS = [
     # Django core
     'django.contrib.admin',
     'django.contrib.auth',
@@ -42,11 +42,14 @@ INSTALLED_APPS = [
 
     # Third-party
     'rest_framework',
+    'rest_framework_simplejwt',
     'djoser',
+
     # Your apps
     'accounts',
     'core',
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -143,14 +146,25 @@ SIMPLE_JWT = {
    'AUTH_HEADER_TYPES': ('JWT',),
 }
 
+# settings.py
 DJOSER = {
     'LOGIN_FIELD': 'email',
-    'USER_CREATE_PASSWORD_RETYPE': True,
-
     'SEND_ACTIVATION_EMAIL': True,
     'ACTIVATION_URL': 'activate/{uid}/{token}',
-
     'PASSWORD_RESET_CONFIRM_URL': 'reset-password/{uid}/{token}',
 
-    'SERIALIZERS': {},
+    'SERIALIZERS': {
+        'user_create': 'accounts.serializers.UserCreateSerializer',
+        # Optional — if you want custom /users/me/ or list
+        # 'user': 'accounts.serializers.UserSerializer',
+    },
 }
+
+# Email settings SMTP
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+
+EMAIL_HOST = 'smtp-relay.brevo.com'          
+EMAIL_PORT = 587                             
+EMAIL_USE_TLS = True                         
+EMAIL_USE_SSL = False                        

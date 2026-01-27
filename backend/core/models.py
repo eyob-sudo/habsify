@@ -11,18 +11,22 @@ class Company(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
 
 class User(AbstractUser):
+    ROLE_BUSINESS_ADMIN ='business_admin'
+    ROLE_EMPLOYEE = 'employee'
+    ROLE_SUPER_ADMIN = 'super_admin'
+
     ROLE_CHOICES = [
-        ('business_admin', 'Business Admin'),
-        ('employee', 'Employee'),
-        ('super_admin', 'Super Admin'),
+        (ROLE_BUSINESS_ADMIN, 'Business Admin'),
+        (ROLE_EMPLOYEE, 'Employee'),
+        (ROLE_SUPER_ADMIN, 'Super Admin'),
     ]
 
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES,default=ROLE_BUSINESS_ADMIN)
     email = models.EmailField(unique=True)
     company = models.ForeignKey(
         Company,
@@ -32,5 +36,6 @@ class User(AbstractUser):
         related_name="users"
     )
 
-    REQUIRED_FIELDS = ['email']
+    USERNAME_FIELD = 'email'
+    REQUIRED_FIELDS = ['username', 'role']
 

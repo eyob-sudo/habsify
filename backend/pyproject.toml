@@ -16,7 +16,7 @@ dependencies = [
     "djangorestframework-simplejwt>=5.5.1",
     "django-phonenumber-field>=8.4.0",
     "phonenumbers>=9.0.22",
-    "django>=6.0.1",
     "twilio>=9.10.0",
     "django-ratelimit>=4.1.0",
+    "django>=6.0.1",
 ]

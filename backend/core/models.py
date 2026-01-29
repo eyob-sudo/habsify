@@ -16,3 +16,6 @@ class Company(models.Model):
         indexes = [
             models.Index(fields=['owner', 'is_active']),
         ]
+
+    def __str__(self):
+        return self.name

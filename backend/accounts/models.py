@@ -2,9 +2,8 @@ from datetime import timedelta
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils import timezone
+from phonenumber_field.modelfields import PhoneNumberField
 
 
 def default_otp_expiry():
@@ -67,7 +66,11 @@ class Profile(models.Model):
 
 class PhoneNumber(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='phone_numbers')
-    number = models.CharField(max_length=20, unique=True)
+    number = PhoneNumberField(
+        unique=True,
+        null=True,
+        blank=True,
+    )
     verified_at = models.DateTimeField(null=True, blank=True)
     is_primary = models.BooleanField(default=True)
 

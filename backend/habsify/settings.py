@@ -145,6 +145,8 @@ BASE_URL=config("BASE_URL", default="http://localhost:8000")
 # Assume Ethiopia for phones
 PHONE_COUNTRY_CODE = '251'
 CURRENT_SITE_DOMAIN = BASE_URL
+PHONENUMBER_DEFAULT_REGION = None
+
 
 
 REST_FRAMEWORK = {
@@ -166,7 +168,7 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,
     'SEND_ACTIVATION_EMAIL': False,
     'SERIALIZERS': {
-        'user_create_password_retype': 'accounts.serializers.UserCreateSerializer',
+        'user_create_password_retype': 'accounts.serializers.CreatePasswordRetypeSerializer',
     },
     
 }

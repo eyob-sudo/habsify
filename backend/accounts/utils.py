@@ -7,6 +7,7 @@ from twilio.base.exceptions import TwilioRestException
 from django.conf import settings
 from accounts.models import OTPCode, Profile
 from phonenumber_field.phonenumber import PhoneNumber
+from rest_framework.exceptions import ValidationError
 
 logger = logging.getLogger('account')
 
@@ -15,15 +16,16 @@ def generate_otp(length=6):
     return ''.join(random.choices('0123456789', k=length))
 
 def normalize_phone(phone_str):
-    """Normalize phone number assuming Ethiopian region."""
+    if not phone_str.startswith("+"):
+        raise ValidationError("Phone number must be in international format (+...)")
     try:
-        phone = PhoneNumber.from_string(phone_str, region='ET')
-        if phone.is_valid():
-            return phone
-        else:
-            raise ValueError("Invalid phone number.")
+        phone = PhoneNumber.from_string(phone_str)
     except Exception:
-        raise ValueError("Invalid phone number format.")
+        raise ValidationError("Invalid phone number format")
+
+    if not phone.is_valid():
+        raise ValidationError("Invalid phone number")
+    return phone.as_e164
 
 def send_otp_to_phone(profile: Profile, otp_code: str, otp_type=OTPCode.TYPE_SMS):
     """Send OTP via Twilio SMS."""

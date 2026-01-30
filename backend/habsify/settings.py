@@ -140,11 +140,12 @@ AUTH_USER_MODEL = "accounts.User"
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-BASE_URL=config("BASE_URL", default="http://localhost:8000")
+BASE_URL=config("BASE_URL", default="localhost:8000")
+SITE_DOMAIN=config("SITE_DOMAIN", default="localhost:8000")
+SITE_PROTOCOL=config("SITE_PROTOCOL", default="http")
 
 # Assume Ethiopia for phones
 PHONE_COUNTRY_CODE = '251'
-CURRENT_SITE_DOMAIN = BASE_URL
 PHONENUMBER_DEFAULT_REGION = None
 
 
@@ -168,6 +169,7 @@ DJOSER = {
     'USER_CREATE_PASSWORD_RETYPE': True,
     'SEND_ACTIVATION_EMAIL': False,
     'SERIALIZERS': {
+        "activation": "accounts.serializers.ActivationSerializer",
         'user_create_password_retype': 'accounts.serializers.CreatePasswordRetypeSerializer',
     },
     

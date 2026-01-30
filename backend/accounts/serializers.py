@@ -1,7 +1,7 @@
 from django.db import transaction
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings as django_settings
-from djoser.serializers import UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer
+from djoser.serializers import UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer,ActivationSerializer as BaseActivationSerializer
 from djoser.utils import encode_uid
 from djoser.email import ActivationEmail
 from rest_framework import serializers
@@ -61,8 +61,8 @@ class CreatePasswordRetypeSerializer(BaseUserCreatePasswordRetypeSerializer):
                 try:
                     uid = encode_uid(user.pk)
                     token = default_token_generator.make_token(user)
-                    protocol = 'https'
-                    domain = django_settings.BASE_URL
+                    protocol = django_settings.SITE_PROTOCOL
+                    domain = django_settings.SITE_DOMAIN
                     activation_url = f"{protocol}://{domain}/{django_settings.DJOSER['ACTIVATION_URL'].format(uid=uid, token=token)}"
                     context = {
                         'user': user,
@@ -90,4 +90,10 @@ class CreatePasswordRetypeSerializer(BaseUserCreatePasswordRetypeSerializer):
         return user
     
 
-    
+class ActivationSerializer(BaseActivationSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        user = self.user
+        user.is_email_verified = True
+        user.save(update_fields=["is_email_verified"])
+        return data

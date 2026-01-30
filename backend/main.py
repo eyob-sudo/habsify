@@ -21,91 +21,91 @@ class CompanySerializer(serializers.ModelSerializer):
         model = Company
         fields = ['name']
 
-class UserCreateSerializer(UserCreatePasswordRetypeSerializer):
-    company = CompanySerializer(required=False)  # Optional for non-admin roles
-    phone = serializers.CharField(required=False, max_length=20)
+# class UserCreateSerializer(UserCreatePasswordRetypeSerializer):
+#     company = CompanySerializer(required=False)  # Optional for non-admin roles
+#     phone = serializers.CharField(required=False, max_length=20)
 
-    class Meta:
-        model = User
-        fields = (
-            'id',
-            'email',
-            'username',
-            'password',
-            'company',
-            'phone',
-            'role',
-        )
+#     class Meta:
+#         model = User
+#         fields = (
+#             'id',
+#             'email',
+#             'username',
+#             'password',
+#             'company',
+#             'phone',
+#             'role',
+#         )
 
-    def validate(self, attrs):
-        company_data = attrs.pop('company', None)
-        phone = attrs.pop('phone', None)
-        attrs = super().validate(attrs)
-        role = attrs.get('role', User.ROLE_BUSINESS_ADMIN)
-        if role == User.ROLE_BUSINESS_ADMIN:
-            if company_data is None:
-                raise serializers.ValidationError("Company is required for business admins.")
-            attrs['company_data'] = company_data
-        if phone:
-            try:
-                attrs['phone'] = normalize_phone(phone)
-            except ValueError:
-                raise serializers.ValidationError("Invalid phone number format (e.g., use +251912345678).")
-        return attrs
+#     def validate(self, attrs):
+#         company_data = attrs.pop('company', None)
+#         phone = attrs.pop('phone', None)
+#         attrs = super().validate(attrs)
+#         role = attrs.get('role', User.ROLE_BUSINESS_ADMIN)
+#         if role == User.ROLE_BUSINESS_ADMIN:
+#             if company_data is None:
+#                 raise serializers.ValidationError("Company is required for business admins.")
+#             attrs['company_data'] = company_data
+#         if phone:
+#             try:
+#                 attrs['phone'] = normalize_phone(phone)
+#             except ValueError:
+#                 raise serializers.ValidationError("Invalid phone number format (e.g., use +251912345678).")
+#         return attrs
 
-    def create(self, validated_data):
-        company_data = validated_data.pop('company_data', None)
-        phone = validated_data.pop('phone', None)
-        role = validated_data.get('role', User.ROLE_BUSINESS_ADMIN)
-        with transaction.atomic():
-            verification_method = User.VERIFICATION_PHONE if phone else User.VERIFICATION_EMAIL
-            validated_data['verification_method'] = verification_method
-            validated_data['is_active'] = False
+#     def create(self, validated_data):
+#         company_data = validated_data.pop('company_data', None)
+#         phone = validated_data.pop('phone', None)
+#         role = validated_data.get('role', User.ROLE_BUSINESS_ADMIN)
+#         with transaction.atomic():
+#             verification_method = User.VERIFICATION_PHONE if phone else User.VERIFICATION_EMAIL
+#             validated_data['verification_method'] = verification_method
+#             validated_data['is_active'] = False
 
-            user = super().create(validated_data)
-            profile = user.profile
-            if phone:
-                profile.phone = phone
-                profile.save()
-                try:
-                    otp, _ = create_otp_for_user(user, OTPCode.TYPE_SMS)
-                    send_otp_to_phone(profile, otp)  # Or send_otp_async.delay(profile.id, otp) if Celery
-                    logger.info(f"OTP sent during signup for {user.email}")
-                except ValueError as e:
-                    logger.error(f"OTP send failed during signup for {user.email}: {str(e)}")
-                    raise serializers.ValidationError("Failed to send OTP.")
-            else:
-                try:
-                    uid = encode_uid(user.pk)
-                    token = default_token_generator.make_token(user)
-                    protocol = 'https'
-                    domain = django_settings.BASE_URL
-                    activation_url = f"{protocol}://{domain}/{django_settings.DJOSER['ACTIVATION_URL'].format(uid=uid, token=token)}"
-                    context = {
-                        'user': user,
-                        'uid': uid,
-                        'token': token,
-                        'protocol': protocol,
-                        'domain': domain,
-                        'url': activation_url,
-                    }
-                    request = self.context.get("request")
-                    ActivationEmail(
-                        request=request,
-                        context=context).send([user.email])
-                    logger.info(f"Activation email sent for {user.email}")
-                except Exception as e:
-                    logger.error(f"Email send failed during signup for {user.email}: {str(e)}")
-                    raise serializers.ValidationError("Failed to send activation email.")
+#             user = super().create(validated_data)
+#             profile = user.profile
+#             if phone:
+#                 profile.phone = phone
+#                 profile.save()
+#                 try:
+#                     otp, _ = create_otp_for_user(user, OTPCode.TYPE_SMS)
+#                     send_otp_to_phone(profile, otp)  # Or send_otp_async.delay(profile.id, otp) if Celery
+#                     logger.info(f"OTP sent during signup for {user.email}")
+#                 except ValueError as e:
+#                     logger.error(f"OTP send failed during signup for {user.email}: {str(e)}")
+#                     raise serializers.ValidationError("Failed to send OTP.")
+#             else:
+#                 try:
+#                     uid = encode_uid(user.pk)
+#                     token = default_token_generator.make_token(user)
+#                     protocol = 'https'
+#                     domain = django_settings.BASE_URL
+#                     activation_url = f"{protocol}://{domain}/{django_settings.DJOSER['ACTIVATION_URL'].format(uid=uid, token=token)}"
+#                     context = {
+#                         'user': user,
+#                         'uid': uid,
+#                         'token': token,
+#                         'protocol': protocol,
+#                         'domain': domain,
+#                         'url': activation_url,
+#                     }
+#                     request = self.context.get("request")
+#                     ActivationEmail(
+#                         request=request,
+#                         context=context).send([user.email])
+#                     logger.info(f"Activation email sent for {user.email}")
+#                 except Exception as e:
+#                     logger.error(f"Email send failed during signup for {user.email}: {str(e)}")
+#                     raise serializers.ValidationError("Failed to send activation email.")
 
-            if role == User.ROLE_BUSINESS_ADMIN and company_data:
-                company = Company.objects.create(
-                    name=company_data['name'],
-                    owner=user
-                )
-                user.company = company
-                user.save(update_fields=['company'])
-        return user
+#             if role == User.ROLE_BUSINESS_ADMIN and company_data:
+#                 company = Company.objects.create(
+#                     name=company_data['name'],
+#                     owner=user
+#                 )
+#                 user.company = company
+#                 user.save(update_fields=['company'])
+#         return user
 
 class CustomLoginSerializer(serializers.Serializer):
     login = serializers.CharField(required=True)
@@ -232,13 +232,11 @@ class VerifyOTPSerializer(serializers.Serializer):
     
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
-from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated, AllowAny
 # from ratelimit import RateLimitMixin
 # from ratelimit.exceptions import Ratelimited
 from djoser.serializers import ActivationSerializer
-from django.http import HttpResponseRedirect
 from django.conf import settings
 from accounts.serializers import SendOTPSerializer, VerifyOTPSerializer
 import requests

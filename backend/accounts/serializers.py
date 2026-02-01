@@ -6,6 +6,8 @@ from djoser.utils import encode_uid
 from djoser.email import ActivationEmail
 from rest_framework import serializers
 from core.models import Company
+from django.utils import timezone
+from rest_framework import status
 from accounts.utils import create_otp_for_user, send_otp_to_phone, normalize_phone
 from .models import User, PhoneNumber,OTPCode
 from .validators import validate_unique_email, validate_unique_username
@@ -97,3 +99,59 @@ class ActivationSerializer(BaseActivationSerializer):
         user.is_email_verified = True
         user.save(update_fields=["is_email_verified"])
         return data
+
+
+class OTPVerifySerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=6, required=True, trim_whitespace=True)
+    
+    # Uncomment and use if you support multiple OTP purposes
+    # purpose = serializers.ChoiceField(
+    #     choices=OTPCode.PURPOSE_CHOICES,
+    #     required=True,
+    #     error_messages={"required": "OTP purpose is required."}
+    # )
+
+    def validate(self, attrs):
+        request = self.context.get("request")
+        if not request: 
+            raise serializers.ValidationError("Authentication required for OTP verification.")
+
+        
+        code = attrs["code"]
+        # purpose = attrs.get("purpose")  
+
+        try:
+            otp = OTPCode.objects.filter(
+                code=code,
+                used=False,
+                expires_at__gt=timezone.now(),        
+                # purpose=purpose,                     
+            ).latest("created_at")
+            if otp.user:
+                raise serializers.ValidationError("Authentication required for OTP verification.")
+        except OTPCode.DoesNotExist:
+            raise serializers.ValidationError("No valid OTP found. It may have expired or already been used.")
+
+        if otp.is_locked:
+            otp.mark_used()
+            raise serializers.ValidationError("Too many failed attempts. This OTP has been invalidated. Please request a new one.")
+
+        if not otp.verify(code):
+            if otp.is_locked: 
+                otp.mark_used()
+                raise serializers.ValidationError("Too many failed attempts. OTP invalidated.")
+            raise serializers.ValidationError("Incorrect OTP code.")
+
+        attrs["otp"] = otp
+        attrs["user"] = otp.user 
+        return attrs
+
+    def create(self, validated_data):
+        otp = validated_data["otp"]
+        user = validated_data["user"]
+        user.is_active = True
+        user.is_phone_verified = True
+        user.save()
+        otp.mark_used()      
+        return {"detail": "OTP verified successfully"}
+    

@@ -374,3 +374,8 @@ class ActivationView(APIView):
             return HttpResponseRedirect(f"{settings.BASE_URL}/auth/jwt/create/")
         else:
             return HttpResponseRedirect(f"{settings.BASE_URL}/auth/users/")
+        
+
+
+
+        

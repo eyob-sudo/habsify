@@ -110,9 +110,20 @@ class OTPCode(models.Model):
         (TYPE_SMS, 'SMS'),
         (TYPE_EMAIL, 'Email'),
     ]
+    
+    PURPOSE_SIGNUP = "signup"
+    PURPOSE_RESET = "reset"
+    PURPOSE_VERIFY = "verify"
+
+    PURPOSE_CHOICES = [
+        (PURPOSE_SIGNUP, "Signup"),
+        (PURPOSE_RESET, "Password Reset"),
+        (PURPOSE_VERIFY, "Verify Contact"),
+    ]
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='otps')
     code = models.CharField(max_length=6)
+    # purpose = models.CharField(max_length=10, choices=PURPOSE_CHOICES)
     type = models.CharField(max_length=5, choices=TYPE_CHOICES, default=TYPE_EMAIL)
     created_at = models.DateTimeField(auto_now_add=True)
     expires_at = models.DateTimeField(db_index=True, default=default_otp_expiry)
@@ -144,7 +155,27 @@ class OTPCode(models.Model):
     @property
     def is_expired(self):
         return timezone.now() > self.expires_at
+    
+    def can_attempt(self):
+            return self.attempts < self.MAX_ATTEMPTS and not self.used
+    
+    def remain_attempt(self):
+        return self.MAX_ATTEMPTS - self.attempts 
 
+    def verify(self, input_code: str) -> bool:
+        if self.used or self.is_expired:
+            return False
+
+        self.attempts += 1
+
+        if self.code == input_code:
+            self.used = True
+            self.save(update_fields=["used", "attempts"])
+            return True
+
+        self.save(update_fields=["attempts"])
+        return False
+    
     def mark_used(self):
         self.used = True
         self.save(update_fields=['used'])

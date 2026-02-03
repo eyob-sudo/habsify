@@ -68,7 +68,7 @@ ROOT_URLCONF = 'habsify.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / "templates"],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -148,7 +148,8 @@ SITE_PROTOCOL=config("SITE_PROTOCOL", default="http")
 PHONE_COUNTRY_CODE = '251'
 PHONENUMBER_DEFAULT_REGION = None
 
-
+OTP_EXPIRY_SECONDS=60*60
+OTP_MAX_ATTEMPTS=5
 
 REST_FRAMEWORK = {
     'COERCE_DECIMAL_TO_STRING': False,
@@ -165,6 +166,7 @@ SIMPLE_JWT = {
 # Djoser settings
 DJOSER = {
     'LOGIN_FIELD': 'email', 
+    'PASSWORD_RESET_CONFIRM_URL': '/password/reset/confirm/{uid}/{token}',
     'ACTIVATION_URL': 'auth/activate/{uid}/{token}',
     'USER_CREATE_PASSWORD_RETYPE': True,
     'SEND_ACTIVATION_EMAIL': False,

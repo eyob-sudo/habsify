@@ -1,13 +1,17 @@
 from django.contrib.auth.tokens import default_token_generator
-from djoser.utils import decode_uid
+from djoser.utils import decode_uid,encode_uid
 from rest_framework import viewsets, mixins
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from rest_framework import status
 from .models import User,OTPCode
-from .serializers import OTPVerifySerializer, ForgotPasswordSerializer, ResendActivationSerializer, CreatePasswordRetypeSerializer
-from .utils import send_activation_email
+from .serializers import (OTPVerifySerializer, 
+                          ForgotPasswordSerializer, 
+                          ResendActivationSerializer, 
+                          CreatePasswordRetypeSerializer,
+                          PasswordResetConfirmSerializer)
+from .utils import send_activation_email,generate_reset_token
 from rest_framework.viewsets import GenericViewSet
 # from ratelimit.decorators import ratelimit  
 from django.utils.decorators import method_decorator
@@ -24,6 +28,8 @@ class AuthViewSet(GenericViewSet):
             return ResendActivationSerializer
         if self.action == "forgot_password":
             return ForgotPasswordSerializer
+        if self.action == "reset_password":
+            return PasswordResetConfirmSerializer
         return super().get_serializer_class()
 
     # @method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True))
@@ -38,17 +44,32 @@ class AuthViewSet(GenericViewSet):
                 otp.mark_used()
                 raise serializers.ValidationError("Too many failed attempts. OTP invalidated.")
             raise serializers.ValidationError("Incorrect OTP code.")
-        user.is_active = True
-        if otp.type == OTPCode.TYPE_SMS:
-            user.is_phone_verified = True
-            phone = user.phone_numbers.first()
-            if phone:
-                phone.mark_verified()
+        purpose = otp.purpose
+        print("=====================================================================",purpose)
+        if purpose in [OTPCode.PURPOSE_SIGNUP, OTPCode.PURPOSE_VERIFY]:
+            user.is_active = True
+            if otp.type == OTPCode.TYPE_SMS:
+                user.is_phone_verified = True
+                phone = user.phone_numbers.first()
+                if phone:
+                    phone.mark_verified()
+            else:
+                user.is_email_verified = True
+            user.save()
+            otp.mark_used()
+            return Response({"message": "OTP verified successfully"}, status=status.HTTP_200_OK)
+        elif purpose == OTPCode.PURPOSE_RESET:
+            reset_token = default_token_generator.make_token(user)
+            uid = encode_uid(user.pk)
+            otp.mark_used()
+            return Response({
+                "uid": uid,
+                "reset_token": reset_token,
+                "message": "OTP verified. Use the token to reset password."
+            }, status=status.HTTP_200_OK)
         else:
-            user.is_email_verified = True
-        user.save()
-        otp.mark_used()
-        return Response({"message": "OTP verified successfully"}, status=status.HTTP_200_OK)
+            otp.mark_used()
+            raise serializers.ValidationError("Invalid OTP purpose.")
 
     # @method_decorator(ratelimit(key='ip', rate='5/m', method='GET', block=True))
     @action(detail=False, methods=['get'], url_path='activate/(?P<uid>[^/.]+)/(?P<token>[^/.]+)')
@@ -98,3 +119,12 @@ class AuthViewSet(GenericViewSet):
         except Exception as e:
             logger.error(f"Failed to send OTP for password reset: {e}")
             return Response({"error": "Failed to send OTP"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+    @action(detail=False, methods=['post'], url_path='reset-password')
+    def reset_password(self, request):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({"message": "Password reset successfully"}, status=status.HTTP_200_OK)
+

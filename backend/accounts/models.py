@@ -49,18 +49,6 @@ class User(AbstractUser):
     def __str__(self):
         return self.email or self.username
 
-
-class Profile(models.Model):
-    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')
-    avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
-    updated_at = models.DateTimeField(auto_now=True)
-    last_otp_sent_at = models.DateTimeField(null=True, blank=True)
-
-    def __str__(self):
-        return f"Profile for {self.user.email or self.user.username}"
-
-
-
 class PhoneNumber(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='phone_numbers')
     number = PhoneNumberField(
@@ -86,7 +74,6 @@ class PhoneNumber(models.Model):
         user.is_phone_verified = True
         user.verification_method = user.VERIFICATION_PHONE
         user.save(update_fields=['is_phone_verified', 'verification_method'])
-
 
 class OTPCode(models.Model):
     TYPE_SMS = 'sms'
@@ -162,3 +149,4 @@ class OTPCode(models.Model):
     def mark_used(self):
         self.used = True
         self.save(update_fields=['used'])
+

@@ -1,14 +1,12 @@
 from django.db import transaction
 from django.contrib.auth.tokens import default_token_generator
-from django.conf import settings as django_settings
-from django.contrib.auth.hashers import check_password
+from django.conf import settings 
 from djoser.serializers import UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer
 from djoser.utils import decode_uid
 from rest_framework import serializers
 from core.models import Company
 from django.utils import timezone
-from rest_framework import status
-from .utils import create_otp_for_user, send_otp_to_phone, normalize_phone, send_activation_email, send_otp_email
+from .utils import create_otp_for_user, send_otp_to_phone, normalize_phone, send_activation_email
 from .models import User, PhoneNumber, OTPCode
 from .validators import validate_unique_email, validate_unique_username
 
@@ -48,8 +46,8 @@ class CreatePasswordRetypeSerializer(BaseUserCreatePasswordRetypeSerializer):
     def validate(self, attrs):
         self.company_data = attrs.pop('company', None)
         self.phone_data = attrs.pop('phone', None)
-        if self.phone_data and not self.phone_data.get('number'):
-            raise serializers.ValidationError({"phone": "Phone number is required if phone data is provided."})
+        # if self.phone_data and not self.phone_data.get('number'):
+        #     raise serializers.ValidationError({"phone": "Phone number is required if phone data is provided."})
         return super().validate(attrs)
 
     def create(self, validated_data):
@@ -190,8 +188,6 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.set_password(self.validated_data["new_password"])
         user.save()
         return user
-
-
 
 
 

@@ -20,6 +20,8 @@ class User(AbstractUser):
 
     VERIFICATION_PHONE = 'phone'
     VERIFICATION_EMAIL = 'email'
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["username"]
 
     VERIFICATION_CHOICES = [
         (VERIFICATION_PHONE, 'Phone'),

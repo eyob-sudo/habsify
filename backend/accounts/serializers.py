@@ -1,13 +1,15 @@
 from django.db import transaction
 from django.contrib.auth.tokens import default_token_generator
-from django.conf import settings 
+from django.conf import settings as django_settings
+from django.contrib.auth.hashers import check_password
 from djoser.serializers import UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer
 from djoser.utils import decode_uid
 from rest_framework import serializers
 from core.models import Company
 from django.utils import timezone
-from .utils import create_otp_for_user, send_otp_to_phone, normalize_phone, send_activation_email
-from .models import User, PhoneNumber, OTPCode
+from rest_framework import status
+from .utils import create_otp_for_user, send_otp_to_phone, normalize_phone, send_activation_email, send_otp_email
+from .models import User, PhoneNumber, OTPCode,Profile
 from .validators import validate_unique_email, validate_unique_username
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -189,5 +191,35 @@ class ChangePasswordSerializer(serializers.Serializer):
         user.save()
         return user
 
+class ProfileSerializer(serializers.ModelSerializer):
+    user_email = serializers.EmailField(source='user.email', read_only=True)
+    user_username = serializers.CharField(source='user.username', read_only=True)
+    user_first_name = serializers.CharField(source='user.first_name')
+    user_last_name = serializers.CharField(source='user.last_name')
+    role = serializers.CharField(source='user.role')
 
+    class Meta:
+        model = Profile
+        fields = [
+            'updated_at',
+            'user_email',
+            'user_username',
+            'user_first_name',
+            'user_last_name',
+            'role',
+            'street_address',
+            'city',
+            'state',
+            'zip_code',
+        ]
+        read_only_fields = ['updated_at']
 
+    def update(self, instance, validated_data):
+        user_data = validated_data.pop('user', {})
+       
+        if user_data:
+            for attr, value in user_data.items():
+                setattr(instance.user, attr, value)
+            instance.user.save()
+
+        return super().update(instance, validated_data)

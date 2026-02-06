@@ -223,3 +223,81 @@ class ProfileSerializer(serializers.ModelSerializer):
             instance.user.save()
 
         return super().update(instance, validated_data)
+    
+class EmployeeCreateSerializer(serializers.ModelSerializer):
+    phone = serializers.CharField(write_only=True,required=True)
+    re_password = serializers.CharField(write_only=True, required=True)
+    password = serializers.CharField(write_only=True, required=True)
+
+    class Meta:
+        model = User
+        fields = [
+            "email",
+            "username",
+            "first_name",
+            "last_name",
+            "phone",
+            "password",
+            "re_password",
+        ]
+
+    def validate(self, attrs):
+        password = attrs.get("password")
+        re_password = attrs.get("re_password")
+
+        if password != re_password:
+            raise serializers.ValidationError({
+                "re_password": "Passwords do not match."
+            })
+
+        if len(password) < 8:
+            raise serializers.ValidationError({
+                "password": "Password must be at least 8 characters long."
+            })
+
+        return attrs
+
+    def validate_phone(self, value):
+        if PhoneNumber.objects.filter(number=value).exists():
+            raise serializers.ValidationError("This phone number is already in use.")
+        return value
+
+    def validate_email(self, value):
+        if User.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already in use.")
+        return value
+
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError("This username is already in use.")
+        return value
+
+    def create(self, validated_data):
+        phone_number = validated_data.pop("phone")
+        validated_data.pop("re_password")
+
+        password = validated_data.pop("password")
+
+        request = self.context.get("request")
+        company = request.user.company
+
+        user = User.objects.create(
+            is_active=False,
+            role=User.ROLE_EMPLOYEE,
+            company=company,
+            **validated_data
+        )
+
+        user.set_password(password)
+        user.save()
+
+        PhoneNumber.objects.create(
+            user=user,
+            number=phone_number
+        )
+
+        return user
+
+
+
+

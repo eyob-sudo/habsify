@@ -11,11 +11,13 @@ from .serializers import (OTPVerifySerializer,
                           ResendActivationSerializer, 
                           CreatePasswordRetypeSerializer,
                           PasswordResetConfirmSerializer,
-                          ChangePasswordSerializer,ProfileSerializer)
+                          ChangePasswordSerializer,
+                          ProfileSerializer,
+                          EmployeeCreateSerializer)
 from .utils import send_activation_email,generate_reset_token
+from .permissions import IsBusinessAdmin,IsBusinessOrAdmin
 from rest_framework.viewsets import GenericViewSet
 # from ratelimit.decorators import ratelimit  
-from django.utils.decorators import method_decorator
 
 class AuthViewSet(GenericViewSet):
     permission_classes = [AllowAny]
@@ -145,9 +147,7 @@ class ProfileViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get', 'put'], permission_classes=[IsAuthenticated])
     def me(self, request):
         try:
-            print(Profile.objects.get(user=request.user), "=============================================")
             profile = Profile.objects.get(user=request.user)
-
         except Profile.DoesNotExist:
             return Response({"detail": "Profile not found."}, status=404)
         
@@ -160,4 +160,12 @@ class ProfileViewSet(viewsets.ModelViewSet):
             serializer.is_valid(raise_exception=True)
             serializer.save()
             return Response(serializer.data)
+
+class EmployeeCreateViewSet(mixins.CreateModelMixin, GenericViewSet):
+    queryset = User.objects.all()
+    serializer_class = EmployeeCreateSerializer
+    permission_classes = [IsAuthenticated,IsBusinessOrAdmin]
+
+
+    
 

@@ -17,5 +17,17 @@ class Company(models.Model):
             models.Index(fields=['owner', 'is_active']),
         ]
 
+    @property
+    def member_count(self):
+        return self.members.count()
+
+    @property
+    def employee_count(self):
+        return self.members.filter(role='EMPLOYEE').count()
+
+    @property
+    def business_admin(self):
+        return self.members.filter(role='BUSINESS_ADMIN').first()
+
     def __str__(self):
         return self.name

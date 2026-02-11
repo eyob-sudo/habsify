@@ -14,7 +14,7 @@ from .serializers import (OTPVerifySerializer,
                           ChangePasswordSerializer,
                           ProfileSerializer,
                           EmployeeCreateSerializer)
-from .utils import send_activation_email,generate_reset_token
+from .utils import send_activation_email
 from .permissions import IsBusinessAdmin,IsBusinessOrAdmin
 from rest_framework.viewsets import GenericViewSet
 # from ratelimit.decorators import ratelimit  

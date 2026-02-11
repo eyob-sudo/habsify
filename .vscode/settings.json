@@ -4,9 +4,11 @@
   "python.defaultInterpreterPath": "./backend/.venv/bin/python",
   "python.terminal.activateEnvironment": true,
     "cSpell.words": [
+        "bankaccount",
         "djoser",
         "habsify",
         "modelfields",
+        "paymentmethod",
         "phonenumber",
         "simplejwt",
         "viewsets"

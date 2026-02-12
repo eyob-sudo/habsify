@@ -155,6 +155,10 @@ OTP_EXPIRY_SECONDS=60*60
 OTP_MAX_ATTEMPTS=5
 
 REST_FRAMEWORK = {
+    'DEFAULT_THROTTLE_RATES': {
+        'subscriptions_global': '20/minute',    
+        'subscribe_and_pay': '3/hour',       
+    },
     'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',

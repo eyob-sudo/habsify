@@ -1,5 +1,6 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.filters import OrderingFilter,SearchFilter
 from .models import Customer, Interaction
 from .serializers import CustomerSerializer, InteractionSerializer
 from .permissions import HasActiveSubscription,IsOwnerOrEmployee
@@ -7,6 +8,9 @@ from .permissions import HasActiveSubscription,IsOwnerOrEmployee
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
     permission_classes = [IsAuthenticated,HasActiveSubscription,IsOwnerOrEmployee]
+    filter_backends = [OrderingFilter,SearchFilter]
+    search_fields = ['name','created_at']
+    ordering_fields = ['created_at'] 
 
     def get_queryset(self):
         user = self.request.user

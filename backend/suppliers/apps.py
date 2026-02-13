@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class SupplierConfig(AppConfig):
-    name = 'supplier'
+class SuppliersConfig(AppConfig):
+    name = 'suppliers'

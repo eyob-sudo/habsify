@@ -26,3 +26,9 @@ class IsOwnerOrEmployee(BasePermission):
         if request.user.role in ['business_admin','employee','super_admin']:
             return True
         return False
+    
+class IsBusinessAdmin(BasePermission):
+    def has_permission(self, request, view):
+        if request.user.role in ['business_admin']:
+            return True
+        return False

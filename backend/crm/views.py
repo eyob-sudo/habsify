@@ -3,7 +3,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter,SearchFilter
 from .models import Customer, Interaction
 from .serializers import CustomerSerializer, InteractionSerializer
-from .permissions import HasActiveSubscription,IsOwnerOrEmployee
+from .permissions import HasActiveSubscription,IsOwnerOrEmployee,IsBusinessAdmin
 
 class CustomerViewSet(viewsets.ModelViewSet):
     serializer_class = CustomerSerializer
@@ -35,8 +35,7 @@ class InteractionViewSet(viewsets.ModelViewSet):
         return self.queryset.filter(customer__company=self.request.user.company)
 
     def perform_create(self, serializer):
-        serializer.save(customer=self.customer, created_by=self.request.user) 
-    # Employee limit: Read-only for employees
+        serializer.save(customer=self.customer, created_by=self.request.user)
     def get_permissions(self):
         if self.request.method in ['POST', 'PUT', 'DELETE']:
             if self.request.user.role == 'employee':

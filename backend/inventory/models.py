@@ -1,5 +1,6 @@
 from django.db import models
 from core.models import Company
+from django.db import transaction
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -37,18 +38,25 @@ class StockMovement(models.Model):
     notes = models.TextField(blank=True)
 
     def save(self, *args, **kwargs):
-        is_new = self.pk is None  # Only update on create (not edits)
-        super().save(*args, **kwargs)  # Save the movement first
-        
-        if is_new: 
-            if self.type == 'in':
-                self.item.current_stock += self.quantity
-            else:  # 'out'
-                if self.item.current_stock < self.quantity:
-                    raise ValueError(f"Not enough stock for {self.item.name} (have {self.item.current_stock}, need {self.quantity})")
-                self.item.current_stock -= self.quantity
-            self.item.save(update_fields=['current_stock']) 
+        is_new = self.pk is None
 
+        if is_new and self.type == 'out':
+            if self.item.current_stock < self.quantity:
+                raise ValueError(
+                    f"Not enough stock for {self.item.name} "
+                    f"(have {self.item.current_stock}, need {self.quantity})"
+                )
+
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+
+            if is_new:
+                if self.type == 'in':
+                    self.item.current_stock += self.quantity
+                else:  # 'out'
+                    self.item.current_stock -= self.quantity
+
+                self.item.save(update_fields=['current_stock'])
     class Meta:
         ordering = ['-date']
 

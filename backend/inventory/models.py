@@ -1,6 +1,5 @@
-from django.db import models
+from django.db import models, transaction
 from core.models import Company
-from django.db import transaction
 
 class Category(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -61,4 +60,5 @@ class StockMovement(models.Model):
         ordering = ['-date']
 
     def __str__(self):
-        return f"{self.type.upper()} {self.quantity} of {self.item.name} on {self.date}"  
+        return f"{self.type.upper()} {self.quantity} of {self.item.name} on {self.date}"
+    

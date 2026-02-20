@@ -1,4 +1,4 @@
-from django.db import models
+from django.db import models, transaction
 from core.models import Company
 
 class Account(models.Model):
@@ -33,19 +33,19 @@ class Transaction(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     notes = models.TextField(blank=True)
     balance_at_time = models.DecimalField(max_digits=15, decimal_places=2, null=True, blank=True)
-    linked_sale = models.OneToOneField(
+    linked_sale = models.ForeignKey(
         'sales_purchases.Sale',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='transaction' 
+        related_name='transactions' 
     )
-    linked_purchase = models.OneToOneField(
+    linked_purchase = models.ForeignKey(
         'sales_purchases.Purchase',
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name='transaction'
+        related_name='transactions'
     )
     
     def __str__(self):
@@ -65,4 +65,9 @@ class Transaction(models.Model):
             self.balance_at_time = new_balance
             self.account.balance = new_balance
             self.account.save(update_fields=['balance'])
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            super().save(*args, **kwargs)
+            if self.linked_sale:
+                self.linked_sale.update_status()
+            if self.linked_purchase:
+                self.linked_purchase.update_status()

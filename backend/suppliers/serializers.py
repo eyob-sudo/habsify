@@ -31,6 +31,8 @@ class SupplierSerializer(serializers.ModelSerializer):
             payment_sent = ', '.join([f"{t.amount} via {t.account.name} on {t.date.strftime('%Y-%m-%d')}" for t in payments]) if payments else "0"
             bank = ', '.join(set([t.account.name for t in payments if t.account])) if payments else "N/A"
             history.append({
+                "purchase_id": p.id,
+                "transaction_ids": list(payments.values_list('id', flat=True)),
                 "date": p.date.strftime("%Y-%m-%d"),
                 "product_code": p.item.code if p.item else "N/A",
                 "units": p.quantity,

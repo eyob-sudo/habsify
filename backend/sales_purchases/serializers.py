@@ -1,15 +1,27 @@
 from rest_framework import serializers
 from .models import Sale, Purchase,PaymentStatus
-from finance.models import Account, Transaction
+from inventory.models import Inventory
 from django.db.models import Sum
 
 class SaleSerializer(serializers.ModelSerializer):
-    # customer = serializers.CharField(source='customer.name')
     balance = serializers.SerializerMethodField() 
 
     class Meta:
         model = Sale
-        fields = ['id', 'customer', 'item', 'quantity', 'unit_price', 'total', 'date', 'notes', 'status', 'payment_method', 'account', 'balance']
+        fields = ['id', 
+                  'customer', 
+                  'item', 
+                  'quantity', 
+                  'unit_price', 
+                  'total', 
+                  'date', 
+                  'notes', 
+                  'warehouse',
+                  'status',
+                  'payment_method', 
+                  'account', 
+                  'balance']
+        
         read_only_fields = ['total', 'date', 'balance']
 
     def validate(self, data):
@@ -34,15 +46,19 @@ class SaleSerializer(serializers.ModelSerializer):
                     raise serializers.ValidationError("Bank Transfer requires a Bank account.")
                 if account.account_number in ['', None]:
                     raise serializers.ValidationError("Choose proper account with number.")
-                if account.balance < data['total']:
-                    raise serializers.ValidationError("Insufficient balance in selected account.")
             elif payment_method == 'cash':
                 if account.account_type != 'cash':
                     raise serializers.ValidationError("Cash payment requires a Cash account.")
-                if account.balance < data['total']:
-                    raise serializers.ValidationError("Insufficient balance in selected account.")
             else:
                 raise serializers.ValidationError("Payment method must be 'cash' or 'bank_transfer'.")
+
+            try:
+                inventory = Inventory.objects.get(item=data['item'], warehouse=data['warehouse'], company=self.context['request'].user.company)
+                if inventory.current_stock < data['quantity']:
+                    raise serializers.ValidationError("Product does not have enough stock in the selected warehouse.")
+            except Inventory.DoesNotExist:
+                raise serializers.ValidationError("Product does not exist in the selected warehouse.")
+            return data
 
         if status == PaymentStatus.PARTIAL:
             if not account or not payment_method:
@@ -58,10 +74,11 @@ class PurchaseSerializer(serializers.ModelSerializer):
     supplier_name = serializers.CharField(source='supplier.name', read_only=True)
     item_name = serializers.CharField(source='item.name', read_only=True)
     balance = serializers.SerializerMethodField()
+    warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
 
     class Meta:
         model = Purchase
-        fields = ['id', 'supplier', 'supplier_name', 'item', 'item_name', 'quantity',
+        fields = ['id', 'supplier', 'supplier_name', 'item', 'item_name', 'quantity','warehouse','warehouse_name',
                   'unit_price', 'total', 'date', 'notes', 'status', 'payment_method', 'account', 'balance']
         read_only_fields = ['total', 'date', 'balance'] 
 

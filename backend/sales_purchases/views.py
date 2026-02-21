@@ -1,6 +1,7 @@
 from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework import serializers
 from crm.permissions import HasActiveSubscription
 from .models import Sale, Purchase
 from .serializers import SaleSerializer, PurchaseSerializer
@@ -8,30 +9,32 @@ from .serializers import SaleSerializer, PurchaseSerializer
 class SaleViewSet(viewsets.ModelViewSet):
     serializer_class = SaleSerializer
     permission_classes = [IsAuthenticated, HasActiveSubscription]
-    filter_backends = [OrderingFilter, SearchFilter]
-    search_fields = ['customer__name', 'notes']  
-    ordering_fields = ['date', 'total', 'customer__name']
 
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
-            return Sale.objects.select_related('customer', 'company').all()
-        return Sale.objects.select_related('customer', 'company').filter(company=self.request.user.company)
+        qs = Sale.objects.select_related('company')
+        user_company = getattr(self.request.user, 'company', None)
+        if self.request.user.role != 'super_admin' and user_company is not None:
+            qs = qs.filter(company=user_company)
+        return qs
 
     def perform_create(self, serializer):
+        if not hasattr(self.request.user, 'company') or not self.request.user.company:
+            raise serializers.ValidationError("User must have an associated company.")
         serializer.save(company=self.request.user.company)
 
 
 class PurchaseViewSet(viewsets.ModelViewSet):
     serializer_class = PurchaseSerializer
     permission_classes = [IsAuthenticated, HasActiveSubscription]
-    filter_backends = [OrderingFilter, SearchFilter] 
-    search_fields = ['supplier__name', 'notes'] 
-    ordering_fields = ['date', 'total', 'supplier__name']
 
     def get_queryset(self):
-        if self.request.user.role == 'super_admin':
-            return Purchase.objects.select_related('supplier', 'company').all()
-        return Purchase.objects.select_related('supplier', 'company').filter(company=self.request.user.company)
+        qs = Purchase.objects.select_related('company')
+        user_company = getattr(self.request.user, 'company', None)
+        if self.request.user.role != 'super_admin' and user_company is not None:
+            qs = qs.filter(company=user_company)
+        return qs
 
     def perform_create(self, serializer):
+        if not hasattr(self.request.user, 'company') or not self.request.user.company:
+            raise serializers.ValidationError("User must have an associated company.")
         serializer.save(company=self.request.user.company)

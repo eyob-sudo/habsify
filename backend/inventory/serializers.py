@@ -39,13 +39,16 @@ class WarehouseOverviewSerializer(serializers.ModelSerializer):
 class WarehouseInventorySerializer(serializers.ModelSerializer):
     product = serializers.CharField(source='item.name', read_only=True)
     category = serializers.SerializerMethodField()
-    stock = serializers.IntegerField(source='current_stock', read_only=True)
+    stock = serializers.SerializerMethodField(read_only=True)
     unit_price = serializers.DecimalField(source='item.unit_price', max_digits=10, decimal_places=2, read_only=True)
     worth = serializers.SerializerMethodField()
 
     class Meta:
         model = Inventory
         fields = ['id', 'product', 'category', 'stock', 'unit_price', 'worth']
+
+    def get_stock(self, obj):
+        return f"{obj.current_stock} {obj.item.unit_measure}"
 
     def get_category(self, obj):
         return obj.item.category.name if obj.item.category else "Uncategorized"
@@ -80,7 +83,7 @@ class WarehouseCreateSerializer(serializers.ModelSerializer):
 class ItemSerializer(serializers.ModelSerializer):
     class Meta:
         model = Item
-        fields = ['id', 'name', 'code', 'category', 'unit_price']
+        fields = ['id', 'name', 'code', 'category', 'unit_price','unit_measure']
         read_only_fields = ['company'] 
 
 

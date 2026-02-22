@@ -57,10 +57,15 @@ class Transaction(models.Model):
 
             if self.type == 'inflow':
                 new_balance = current_balance + self.amount
+                print('==========in====================',new_balance)
             elif self.type == 'outflow':
+                
                 new_balance = current_balance - self.amount
+                print('==========out===================',new_balance)
             else:
                 raise ValueError(f"Unknown transaction type: {self.type}")
+            
+            print(self.amount,'=============================',new_balance)
 
             self.balance_at_time = new_balance
             self.account.balance = new_balance

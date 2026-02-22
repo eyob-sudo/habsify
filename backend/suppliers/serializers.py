@@ -1,10 +1,10 @@
 from rest_framework import serializers
 from .models import Supplier
 from sales_purchases.models import Purchase
+from django.db.models import Sum,Q
 
-# Supplier overview
 class SupplierListSerializer(serializers.ModelSerializer):
-    products = serializers.IntegerField(read_only=True)
+    products = serializers.SerializerMethodField()
     balance = serializers.DecimalField(max_digits=14, decimal_places=2, read_only=True)
 
     class Meta:
@@ -14,11 +14,12 @@ class SupplierListSerializer(serializers.ModelSerializer):
             'name',
             'phone',
             'address',
-            'contact_person',
             'products',
             'balance',
         )
 
+    def get_products(self, obj):
+        return f"{obj.products} items"
 
 class SupplierHistorySerializer(serializers.ModelSerializer):
     product_code = serializers.CharField(source='item.code', read_only=True)
@@ -45,12 +46,21 @@ class SupplierHistorySerializer(serializers.ModelSerializer):
         return f"{obj.quantity} {getattr(obj.item, 'unit_measure', '')}" 
 
     def get_payment_sent(self, obj):
-        return sum([t.amount for t in obj.transactions.all()])
+        agg = obj.transactions.aggregate(
+            total_out=Sum('amount', filter=Q(type='outflow')),
+            total_in=Sum('amount', filter=Q(type='inflow')),
+        )
+
+        total_out = agg['total_out'] or 0
+        total_in = agg['total_in'] or 0
+
+        return total_out - total_in
 
     def get_bank(self, obj):
         last_txn = obj.transactions.last()
         return last_txn.account.full_name if last_txn and hasattr(last_txn, 'account') else None
 
     def get_remain(self, obj):
-        return obj.total - self.get_payment_sent(obj)
-    
+        net_paid = self.get_payment_sent(obj)
+        return obj.total - net_paid
+        

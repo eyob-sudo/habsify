@@ -1,13 +1,14 @@
 from rest_framework import viewsets,mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework import serializers
+from django.db.models import Sum, Value
+from django.db.models.functions import Coalesce
 from django_filters.rest_framework import DjangoFilterBackend
 from crm.permissions import IsBusinessAdmin
-from rest_framework.decorators import action
 from crm.permissions import HasActiveSubscription
-from core.models import Company
 from .models import Item, Category, StockMovement, Warehouse
+from django.db.models import Prefetch
+from inventory.models import Inventory
 from .serializers import (
     WarehouseOverviewSerializer,
     WarehouseDetailSerializer,
@@ -19,11 +20,10 @@ from .models import Warehouse, Item
 
 
 class WarehouseViewSet(viewsets.ModelViewSet):
-    queryset = Warehouse.objects.prefetch_related('inventories__item__category').all()
     permission_classes = [IsAuthenticated, HasActiveSubscription, IsBusinessAdmin]
     filter_backends = [OrderingFilter, SearchFilter, DjangoFilterBackend]
     search_fields = ['name', 'address']
-    ordering_fields = ['name', 'created_at']
+    ordering_fields = ['name', 'created_at','current_stock']
     filterset_fields = ['name']
 
     def get_serializer_class(self):
@@ -32,6 +32,32 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         if self.action == 'retrieve':
             return WarehouseDetailSerializer
         return WarehouseCreateSerializer
+
+    def get_queryset(self):
+        request = self.request
+        inventory_qs = Inventory.objects.filter(company=request.user.company)
+        
+        if request:
+            search = request.query_params.get("inventory_search")
+            if search:
+                inventory_qs = inventory_qs.filter(
+                    item__name__icontains=search
+                )
+
+            category = request.query_params.get("category")
+            if category:
+                inventory_qs = inventory_qs.filter(
+                    item__category__name__iexact=category
+                )
+
+        return Warehouse.objects.annotate(
+            current_stock=Coalesce(
+                Sum('inventories__current_stock'),
+                Value(0)
+            )
+        ).prefetch_related(
+            Prefetch("inventories", queryset=inventory_qs)
+        )
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)

@@ -34,31 +34,40 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         return WarehouseCreateSerializer
 
     def get_queryset(self):
-        request = self.request
-        inventory_qs = Inventory.objects.filter(company=request.user.company)
-        
-        if request:
-            search = request.query_params.get("inventory_search")
-            if search:
-                inventory_qs = inventory_qs.filter(
-                    item__name__icontains=search
-                )
+        inventory_qs = Inventory.objects.filter(
+            company=self.request.user.company
+        )
 
-            category = request.query_params.get("category")
-            if category:
-                inventory_qs = inventory_qs.filter(
-                    item__category__name__iexact=category
-                )
+        # Search
+        search = self.request.query_params.get("inventory_search")
+        if search:
+            inventory_qs = inventory_qs.filter(
+                item__name__icontains=search
+            )
 
-        return Warehouse.objects.annotate(
+        # Category
+        category = self.request.query_params.get("category")
+        if category:
+            inventory_qs = inventory_qs.filter(
+                item__category__name__iexact=category
+            )
+
+        # Sorting
+        allowed_ordering = ["current_stock", "-current_stock","item"]
+        ordering = self.request.query_params.get("inventory_ordering")
+        if ordering in allowed_ordering:
+            inventory_qs = inventory_qs.order_by(ordering)
+
+        return Warehouse.objects.filter(
+            company=self.request.user.company
+        ).annotate(
             current_stock=Coalesce(
-                Sum('inventories__current_stock'),
+                Sum("inventories__current_stock"),
                 Value(0)
             )
         ).prefetch_related(
             Prefetch("inventories", queryset=inventory_qs)
         )
-
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 

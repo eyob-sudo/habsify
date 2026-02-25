@@ -17,5 +17,6 @@ urlpatterns = [
     path('inventory/',include('inventory.urls')), 
     path('finance/',include('finance.urls')), 
     path('api/',include('analytics.urls')), 
+    path('notifications/',include('notifications.urls')), 
 ]
 

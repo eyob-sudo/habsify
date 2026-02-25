@@ -57,6 +57,7 @@ INSTALLED_APPS = [
     'sales_purchases',
     'inventory',
     'finance',
+    'notifications',
 ]
 
 

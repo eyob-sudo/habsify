@@ -170,6 +170,11 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
        
     ),
+     'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
     # 'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     # 'DEFAULT_RENDERER_CLASSES': [
     #     'rest_framework.renderers.JSONRenderer',
@@ -229,3 +234,14 @@ if DEBUG:
         'django_ratelimit.E003',
         'django_ratelimit.W001',
     ]
+
+from celery.schedules import crontab
+
+CELERY_BROKER_URL = 'redis://redis:6379/0'
+CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_BEAT_SCHEDULE = {
+    'daily-notifications': {
+        'task': 'notifications.tasks.generate_daily_notifications',
+        'schedule': crontab(hour=0, minute=0), 
+    },
+}

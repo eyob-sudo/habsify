@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
+from celery.schedules import crontab
 import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     'djoser',
     'phonenumber_field',
     'django_ratelimit',
+    'django_celery_beat',
     # Your apps
     'accounts',
     'core',
@@ -235,13 +237,23 @@ if DEBUG:
         'django_ratelimit.W001',
     ]
 
-from celery.schedules import crontab
 
-CELERY_BROKER_URL = 'redis://redis:6379/0'
-CELERY_RESULT_BACKEND = 'redis://redis:6379/0'
+CELERY_BROKER_URL = config(
+    "CELERY_BROKER_URL", default="redis://redis:6379/0"
+)
+CELERY_RESULT_BACKEND = config(
+    "CELERY_RESULT_BACKEND", default="redis://redis:6379/0"
+)
+
+CELERY_ACCEPT_CONTENT = ["json"]
+CELERY_TASK_SERIALIZER = "json"
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TIMEZONE = "UTC"
+
+
 CELERY_BEAT_SCHEDULE = {
-    'daily-notifications': {
-        'task': 'notifications.tasks.generate_daily_notifications',
-        'schedule': crontab(hour=0, minute=0), 
+    "daily-notifications": {
+        "task": "notifications.tasks.generate_daily_notifications",
+        "schedule": crontab(hour=0, minute=0),
     },
 }

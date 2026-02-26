@@ -76,7 +76,7 @@ class PurchaseSerializer(serializers.ModelSerializer):
     item_name = serializers.CharField(source='item.name', read_only=True)
     balance = serializers.SerializerMethodField()
     warehouse_name = serializers.CharField(source='warehouse.name', read_only=True)
-    unit_measure = serializers.ChoiceField(source='item.unit_measure',choices=Item._meta.get_field('unit_measure').choices)
+    unit_measure = serializers.ReadOnlyField(source='item.unit_measure')
 
     class Meta:
         model = Purchase

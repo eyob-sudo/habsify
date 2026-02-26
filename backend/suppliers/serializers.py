@@ -19,7 +19,8 @@ class SupplierListSerializer(serializers.ModelSerializer):
         )
 
     def get_products(self, obj):
-        return f"{obj.products} items"
+        products = getattr(obj, 'products', 0)
+        return f"{products} items"
 
 class SupplierHistorySerializer(serializers.ModelSerializer):
     product_code = serializers.CharField(source='item.code', read_only=True)

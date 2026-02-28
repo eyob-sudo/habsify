@@ -5,7 +5,7 @@ from django.db.models import Sum
 
 
 class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
-    units = serializers.IntegerField(source="quantity", read_only=True)
+    units = serializers.SerializerMethodField()
     product_name = serializers.CharField(source="item.name", read_only=True)
     product_code = serializers.SerializerMethodField()
     product_price = serializers.SerializerMethodField()
@@ -28,6 +28,9 @@ class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
             'bank',
             'remain'
         ]
+
+    def get_units(self, obj):
+        return f"{obj.quantity} {getattr(obj.item, 'unit_measure', '')}" 
 
     def get_product_code(self,obj):
         return obj.item.code if obj.item else "N/A"
@@ -54,7 +57,6 @@ class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
 
 class CustomerSerializer(serializers.ModelSerializer):
     products_count = serializers.SerializerMethodField()
-    sales = CustomerTransactionHistorySerializer(many=True, read_only=True)
 
     class Meta:
         model = Customer
@@ -65,7 +67,6 @@ class CustomerSerializer(serializers.ModelSerializer):
             'address',
             'products_count',
             'notes',
-            'sales'
         ]
 
     def get_products_count(self, obj):

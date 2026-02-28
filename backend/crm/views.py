@@ -7,6 +7,7 @@ from .models import Customer, Interaction
 from .serializers import CustomerSerializer, InteractionSerializer,CustomerTransactionHistorySerializer
 from .permissions import HasActiveSubscription,IsOwnerOrEmployee,IsBusinessAdmin
 from .utils import export_customer_history
+from .pagination import CustomerPagination
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
@@ -20,6 +21,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     filter_backends = [OrderingFilter, SearchFilter]
     search_fields = ['name', 'created_at']
     ordering_fields = ['created_at']
+    pagination_class = CustomerPagination
 
     def get_queryset(self):
         user = self.request.user
@@ -61,6 +63,24 @@ class CustomerViewSet(viewsets.ModelViewSet):
             sales_queryset = sales_queryset.order_by(ordering)
         else:
             sales_queryset = sales_queryset.order_by("-date")
+
+        page = self.paginate_queryset(sales_queryset)
+        if page is not None:
+            serializer = CustomerTransactionHistorySerializer(page, many=True)
+            if export_type:
+                response = export_customer_history(
+                    export_type,
+                    CustomerTransactionHistorySerializer(sales_queryset, many=True).data,
+                    customer.id
+                )
+                if response:
+                    return response
+                return Response(
+                    {"detail": "Invalid export type. Use 'csv' or 'pdf'."},
+                    status=400
+                )
+
+            return self.get_paginated_response(serializer.data)
 
         serializer = CustomerTransactionHistorySerializer(
             sales_queryset,

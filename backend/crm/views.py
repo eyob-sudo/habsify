@@ -40,8 +40,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
         if user.role != "super_admin" and customer.company != user.company:
             return Response({"detail": "Not allowed"}, status=403)
 
-        search = request.query_params.get("search_sales")
-        ordering = request.query_params.get("sales_ordering")
+        search = request.query_params.get("search")
+        ordering = request.query_params.get("ordering")
         export_type = request.query_params.get("export")
 
         allowed_ordering = ["date", "-date"]

@@ -40,7 +40,12 @@ class WarehouseInventorySerializer(serializers.ModelSerializer):
     product = serializers.CharField(source='item.name', read_only=True)
     category = serializers.SerializerMethodField()
     stock = serializers.SerializerMethodField(read_only=True)
-    unit_price = serializers.DecimalField(source='item.unit_price', max_digits=10, decimal_places=2, read_only=True)
+    unit_price = serializers.DecimalField(
+        source='item.unit_price', 
+        max_digits=10, 
+        decimal_places=2, 
+        read_only=True
+    )
     worth = serializers.SerializerMethodField()
 
     class Meta:
@@ -55,23 +60,6 @@ class WarehouseInventorySerializer(serializers.ModelSerializer):
 
     def get_worth(self, obj):
         return f"${obj.current_stock * obj.item.unit_price:,.2f}"
-
-
-class WarehouseDetailSerializer(serializers.ModelSerializer):
-    products = WarehouseInventorySerializer(many=True, source='inventories', read_only=True)
-    total_stock = serializers.SerializerMethodField()
-    total_worth = serializers.SerializerMethodField()
-
-    class Meta:
-        model = Warehouse
-        fields = ['id', 'name', 'address', 'created_at', 'products', 'total_stock', 'total_worth']
-
-    def get_total_stock(self, obj):
-        return sum(inv.current_stock for inv in obj.inventories.all())
-
-    def get_total_worth(self, obj):
-        total = sum(inv.current_stock * inv.item.unit_price for inv in obj.inventories.all())
-        return f"${total:,.2f}"
 
 
 class WarehouseCreateSerializer(serializers.ModelSerializer):

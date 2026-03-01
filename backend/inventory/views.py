@@ -1,6 +1,7 @@
 from rest_framework import viewsets,mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.response import Response
 from django.db.models import Sum, Value
 from django.db.models.functions import Coalesce
 from django_filters.rest_framework import DjangoFilterBackend
@@ -11,7 +12,7 @@ from django.db.models import Prefetch
 from inventory.models import Inventory
 from .serializers import (
     WarehouseOverviewSerializer,
-    WarehouseDetailSerializer,
+    WarehouseInventorySerializer,
     WarehouseCreateSerializer,
     ItemSerializer,CategorySerializer,
     StockMovementSerializer
@@ -21,43 +22,41 @@ from .models import Warehouse, Item
 
 class WarehouseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasActiveSubscription, IsBusinessAdmin]
+    
+    # Standard filters for the WAREHOUSE LIST view
     filter_backends = [OrderingFilter, SearchFilter, DjangoFilterBackend]
-    search_fields = ['name', 'address']
-    ordering_fields = ['name', 'created_at','current_stock']
+    search_fields = ['name', 'address']                  
+    ordering_fields = ['name', 'created_at', 'current_stock']
     filterset_fields = ['name']
 
     def get_serializer_class(self):
         if self.action == 'list':
             return WarehouseOverviewSerializer
-        if self.action == 'retrieve':
-            return WarehouseDetailSerializer
         return WarehouseCreateSerializer
 
     def get_queryset(self):
         inventory_qs = Inventory.objects.filter(
             company=self.request.user.company
-        )
+        ).select_related('item', 'item__category')   
 
-        # Search
-        search = self.request.query_params.get("inventory_search")
-        if search:
+        inventory_search = self.request.query_params.get("inventory_search")
+        if inventory_search:
             inventory_qs = inventory_qs.filter(
-                item__name__icontains=search
+                item__name__icontains=inventory_search
             )
 
-        # Category
         category = self.request.query_params.get("category")
         if category:
             inventory_qs = inventory_qs.filter(
                 item__category__name__iexact=category
             )
 
-        # Sorting
-        allowed_ordering = ["current_stock", "-current_stock","item"]
-        ordering = self.request.query_params.get("inventory_ordering")
-        if ordering in allowed_ordering:
-            inventory_qs = inventory_qs.order_by(ordering)
+        allowed_ordering = ["current_stock", "-current_stock", "item__name", "-item__name"]
+        inventory_ordering = self.request.query_params.get("inventory_ordering")
+        if inventory_ordering in allowed_ordering:
+            inventory_qs = inventory_qs.order_by(inventory_ordering)
 
+        # Main Warehouse queryset
         return Warehouse.objects.filter(
             company=self.request.user.company
         ).annotate(
@@ -68,9 +67,18 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         ).prefetch_related(
             Prefetch("inventories", queryset=inventory_qs)
         )
+
+    def retrieve(self, request, *args, **kwargs):
+        """Return flat list of products for this warehouse (exactly what you asked for)"""
+        warehouse = self.get_object()                     
+        serializer = WarehouseInventorySerializer(
+            warehouse.inventories.all(),                  
+            many=True
+        )
+        return Response(serializer.data)
+
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
-
 
 class ItemViewSet(viewsets.ModelViewSet):
     queryset = Item.objects.select_related('category').all()

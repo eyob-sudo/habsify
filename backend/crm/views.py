@@ -32,6 +32,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Customer.objects.select_related("company").filter(
             company=user.company
         )
+
     def retrieve(self, request, pk=None):
         user = request.user
 
@@ -106,6 +107,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)
 
+        
 class InteractionViewSet(viewsets.ModelViewSet):
     queryset = Interaction.objects.all()
     serializer_class = InteractionSerializer

@@ -16,7 +16,7 @@ class AccountViewSet(viewsets.ModelViewSet):
     serializer_class = AccountSerializer
     permission_classes = [IsAuthenticated, HasActiveSubscription]
     filter_backends = [OrderingFilter, SearchFilter]
-    http_method_names = ["get","post","path","put"]
+    http_method_names = ["get","post","path","put","options","head"]
     search_fields = ['name']
     ordering_fields = ['name', 'balance']
 

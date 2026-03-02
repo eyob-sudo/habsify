@@ -18,7 +18,7 @@ from .serializers import (
     StockMovementSerializer
 )
 from .models import Warehouse, Item
-from .pagination import InventorPagination  
+from .pagination import StandardPagination  
 
 class WarehouseViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasActiveSubscription, IsBusinessAdmin]
@@ -26,7 +26,7 @@ class WarehouseViewSet(viewsets.ModelViewSet):
     search_fields = ['name', 'address']                  
     ordering_fields = ['name', 'created_at', 'current_stock', 'total_worth', 'address', 'item_count']
     filterset_fields = ['name']
-    pagination_class = InventorPagination 
+    pagination_class = StandardPagination 
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -117,12 +117,22 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         serializer.save(company=self.request.user.company)
 
 class ItemViewSet(viewsets.ModelViewSet):
-    queryset = Item.objects.select_related('category').all()
-    serializer_class = ItemSerializer
     permission_classes = [IsAuthenticated, HasActiveSubscription, IsBusinessAdmin]
-    filter_backends = [DjangoFilterBackend, SearchFilter]
-    filterset_fields = ['name']
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filterset_fields = ['category__name']
     search_fields = ['name', 'code']
+    ordering_fields = ['name', 'code', 'unit_price', 'created_at', 'category__name', 'unit_measure']
+    pagination_class = StandardPagination 
+
+    def get_queryset(self):
+        user = self.request.user
+        qs = Item.objects.select_related('category')
+        if user.role != "super_admin":
+            qs = qs.filter(company=user.company)
+        return qs.all()
+
+    def get_serializer_class(self):
+        return ItemSerializer
 
     def perform_create(self, serializer):
         serializer.save(company=self.request.user.company)

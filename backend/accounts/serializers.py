@@ -14,6 +14,7 @@ from .models import User, PhoneNumber, OTPCode,Profile
 from .validators import validate_unique_email, validate_unique_username
 from django.contrib.auth import authenticate
 from subscriptions.models import Subscription
+from datetime import timedelta
 
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -377,16 +378,16 @@ class OTPResetSerializer(serializers.Serializer):
             raise serializers.ValidationError({"detail": "User not found."})
         
         # Get the latest unused OTP for this purpose and type
-        print(user.email, otp_type,OTPCode.PURPOSE_RESET)
         otp_obj = OTPCode.objects.filter(
-            user=user,
+            user_id=user.id,
             purpose=OTPCode.PURPOSE_RESET,
-            used=False
-        ).order_by('-created_at').first()
+            type=otp_type,
+            used=False,
+            expires_at__gt=timezone.now() - timedelta(seconds=1)  
+        ).order_by('-expires_at').first()
         
         if not otp_obj:
             raise serializers.ValidationError({"detail": "No valid OTP found for reset."})
-        
         if otp_obj.is_expired:
             raise serializers.ValidationError({"detail": "OTP has expired."})
         

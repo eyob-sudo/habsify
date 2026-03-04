@@ -82,7 +82,7 @@ class AuthViewSet(GenericViewSet):
             raise serializers.ValidationError({"detail": "Invalid OTP purpose."})
 
     # @method_decorator(ratelimit(key='ip', rate='5/m', method='GET', block=True))
-    @action(detail=False, methods=['get'], url_path='activate/(?P<uid>[^/.]+)/(?P<token>[^/.]+)')
+    @action(detail=False, methods=['get'], url_path='activate/(?P<uid>[^/.]+)/(?P<token>[^/.]+)',authentication_classes=[],permission_classes=[AllowAny])
     def activate(self, request, uid=None, token=None):
         try:
             uid_decoded = decode_uid(uid)
@@ -99,7 +99,7 @@ class AuthViewSet(GenericViewSet):
             return Response({"detail": "Invalid or expired token"}, status=status.HTTP_400_BAD_REQUEST)
 
     # @method_decorator(ratelimit(key='ip', rate='3/m', method='POST', block=True))
-    @action(detail=False, methods=["post"], url_path="resend-activation")
+    @action(detail=False, methods=["post"], url_path="resend-activation",authentication_classes=[],permission_classes=[AllowAny])
     def resend_activation(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)

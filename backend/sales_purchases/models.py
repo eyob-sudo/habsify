@@ -34,16 +34,26 @@ class Sale(models.Model):
 
     def __str__(self):
         return f"Sale to {self.customer or 'Cash'} - {self.id}"
+    
+    @property
+    def balance(self):
+        paid = self.transactions.aggregate(
+            total_paid=Sum('amount')
+        )['total_paid'] or 0
+
+        return self.total - paid
 
     def update_status(self):
-        paid = self.transactions.aggregate(total_paid=Sum('amount'))['total_paid'] or 0
-        if paid >= self.total:
-            self.status = PaymentStatus.PAID
-        elif paid > 0:
-            self.status = PaymentStatus.PARTIAL
+        balance = self.balance
+
+        if balance == 0:
+            status = PaymentStatus.PAID
+        elif balance > 0:
+            status = PaymentStatus.PARTIAL
         else:
-            self.status = PaymentStatus.UNPAID
-        self.save(update_fields=['status'])
+            status = PaymentStatus.OVERPAID 
+
+        Sale.objects.filter(pk=self.pk).update(status=status)
 
 class Purchase(models.Model):
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
@@ -63,17 +73,22 @@ class Purchase(models.Model):
         return f"Purchase from {self.supplier or 'Cash'} - {self.id}"
     
 
-    def update_status(self):
+    @property
+    def balance(self):
         agg = self.transactions.aggregate(
             total_out=Sum('amount', filter=Q(type='outflow')),
-            total_in=Sum('amount', filter=Q(type='inflow'))
+            total_in=Sum('amount', filter=Q(type='inflow')),
         )
 
         total_out = agg['total_out'] or 0
         total_in = agg['total_in'] or 0
 
         net_paid = total_out - total_in
-        balance = self.total - net_paid
+        return self.total - net_paid
+    
+
+    def update_status(self):
+        balance = self.balance
 
         if balance == 0:
             status = PaymentStatus.PAID

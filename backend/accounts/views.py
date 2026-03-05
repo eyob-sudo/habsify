@@ -177,12 +177,8 @@ class ProfileViewSet(viewsets.ModelViewSet):
             return Response(serializer.data)
         
         elif request.method == 'PATCH':
-            print("=== Incoming PATCH data ===")           
-            print(request.data)                             
             serializer = self.get_serializer(profile, data=request.data, partial=True)
             if not serializer.is_valid():
-                print("=== Validation Errors ===")          
-                print(serializer.errors)                    
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             
             serializer.save()

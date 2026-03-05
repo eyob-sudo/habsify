@@ -59,7 +59,7 @@ class SubscriptionViewSet(mixins.ListModelMixin,
             "message": "Payment submitted. Please wait up to 24 hours for manual approval."
         }, status=201)
     
-    @action(detail=True, methods=['post'], permission_classes=[IsOwnerOrAdmin,HasActiveSubscription])
+    @action(detail=True, methods=['post'], permission_classes=[IsOwnerOrAdmin])
     def cancel(self, request, uid=None):
         subscription = self.get_object()
 
@@ -88,4 +88,4 @@ class PaymentMethodViewSet(viewsets.ReadOnlyModelViewSet):
 class BankAccountViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BankAccount.objects.filter(is_active=True)
     serializer_class = BankAccountSerializer
-    permission_classes = [IsAuthenticated,HasActiveSubscription]
+    permission_classes = [IsAuthenticated]

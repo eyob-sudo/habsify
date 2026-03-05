@@ -2,12 +2,12 @@ from rest_framework import viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-
+from crm.permissions import HasActiveSubscription
 from .services.dashboard_service import DashboardService
 
 
 class DashboardViewSet(viewsets.GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,HasActiveSubscription]
 
     @action(detail=False, methods=["get"], url_path="overview")
     def overview(self, request):

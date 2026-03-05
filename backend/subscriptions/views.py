@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import SubscriptionPlan,Subscription,Payment,PaymentMethod,BankAccount
+from crm.permissions import HasActiveSubscription 
 from .permissions import IsOwnerOrAdmin,HasValidSubscription
 from .throttles import SubscriptionGlobalThrottle,SubscribeAndPayThrottle
 from .serializers import (SubscriptionPlanSerializer,
@@ -29,7 +30,7 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     serializer_class = SubscriptionSerializer
     permission_classes = [IsAuthenticated,IsOwnerOrAdmin]
     lookup_field = 'uid'
-    throttle_classes = [SubscriptionGlobalThrottle]
+    # throttle_classes = [SubscriptionGlobalThrottle]
 
     def get_queryset(self):
         if self.request.user.is_staff:
@@ -46,7 +47,8 @@ class SubscriptionViewSet(mixins.ListModelMixin,
     @action(detail=False, methods=['post'],
             serializer_class=PayNowSerializer,
             parser_classes=(MultiPartParser,FormParser, JSONParser),
-            throttle_classes=[SubscribeAndPayThrottle])
+            # throttle_classes=[SubscribeAndPayThrottle]
+            )
     def subscribe_and_pay(self, request):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -57,7 +59,7 @@ class SubscriptionViewSet(mixins.ListModelMixin,
             "message": "Payment submitted. Please wait up to 24 hours for manual approval."
         }, status=201)
     
-    @action(detail=True, methods=['post'], permission_classes=[IsOwnerOrAdmin])
+    @action(detail=True, methods=['post'], permission_classes=[IsOwnerOrAdmin,HasActiveSubscription])
     def cancel(self, request, uid=None):
         subscription = self.get_object()
 
@@ -86,4 +88,4 @@ class PaymentMethodViewSet(viewsets.ReadOnlyModelViewSet):
 class BankAccountViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BankAccount.objects.filter(is_active=True)
     serializer_class = BankAccountSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,HasActiveSubscription]

@@ -19,7 +19,7 @@ class NotificationViewSet(mixins.ListModelMixin,mixins.RetrieveModelMixin,viewse
     filterset_class = NotificationFilter
     search_fields = ["message"]
     ordering_fields = ["created_at"]
-    ordering = ["-created_at"]
+    ordering = ["is_read", "-created_at"]
     pagination_class = NotificationPagination 
 
     def get_queryset(self):
@@ -48,3 +48,8 @@ class NotificationViewSet(mixins.ListModelMixin,mixins.RetrieveModelMixin,viewse
         page = paginator.paginate_queryset(qs, request)
         serializer = self.get_serializer(page, many=True)
         return paginator.get_paginated_response(serializer.data)
+    
+    @action(detail=False, methods=["get"])
+    def unread_count(self, request):
+        qs = self.get_queryset().filter(is_read=False)
+        return Response({"unread_count": qs.count()})

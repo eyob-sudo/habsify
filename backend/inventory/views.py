@@ -121,7 +121,7 @@ class WarehouseViewSet(viewsets.ModelViewSet):
         serializer.save(company=self.request.user.company)
 
 class ItemViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated, HasActiveSubscription, IsBusinessAdmin]
+    permission_classes = [IsAuthenticated, HasActiveSubscription]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     filterset_fields = ['category__name']
     search_fields = ['name', 'code']
@@ -164,7 +164,6 @@ class CategoryViewSet(viewsets.ModelViewSet):
 
 
 class StockMovementViewSet(viewsets.ModelViewSet):
-
     permission_classes = [IsAuthenticated, HasActiveSubscription]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     http_method_names = ["get", "post"]

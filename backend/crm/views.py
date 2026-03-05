@@ -114,7 +114,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     def perform_create(self, serializer):
-        serializer.save(company=self.request.user.company)   
+        serializer.save(company=self.request.user.company)  
+ 
 class InteractionViewSet(viewsets.ModelViewSet):
     queryset = Interaction.objects.all()
     serializer_class = InteractionSerializer

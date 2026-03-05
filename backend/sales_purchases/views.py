@@ -42,7 +42,7 @@ class PurchaseViewSet(viewsets.ModelViewSet):
 class PurchaseDropdownViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Purchase.objects.all()
     serializer_class = PurchaseDropdownSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,HasActiveSubscription]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -52,14 +52,12 @@ class PurchaseDropdownViewSet(viewsets.ReadOnlyModelViewSet):
         if user.role != "super_admin":
             qs = qs.filter(company=user.company)
 
-        # qs = qs.filter(status="completed")
-
         return qs.order_by("-id")
     
 class SaleDropdownViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Sale.objects.all()
     serializer_class = SaleDropdownSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated,HasActiveSubscription]
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -67,7 +65,5 @@ class SaleDropdownViewSet(viewsets.ReadOnlyModelViewSet):
         user = self.request.user
         if user.role != "super_admin":
             qs = qs.filter(company=user.company)
-
-        # qs = qs.filter(status="completed")
 
         return qs.order_by("-id")

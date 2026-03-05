@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Supplier
+from crm.limits import check_plan_limit
 from sales_purchases.models import Purchase
 from django.db.models import Sum,Q
 
@@ -17,7 +18,15 @@ class SupplierListSerializer(serializers.ModelSerializer):
             'products',
             'balance',
         )
+    def validate(self, attrs):
+        if self.instance:  
+            return attrs
 
+        company = self.context["request"].user.company
+        check_plan_limit(company)
+
+        return attrs
+    
     def get_products(self, obj):
         products = getattr(obj, 'products', 0)
         return f"{products} items"

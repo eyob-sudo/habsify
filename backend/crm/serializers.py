@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from sales_purchases.models import Sale
+from crm.limits import check_plan_limit
 from .models import Customer,Interaction
 from django.db.models import Sum
 
@@ -68,6 +69,15 @@ class CustomerSerializer(serializers.ModelSerializer):
             'products_count',
             'notes',
         ]
+
+    def validate(self, attrs):
+        if self.instance: 
+            return attrs
+
+        company = self.context["request"].user.company
+        check_plan_limit(company)
+
+        return attrs
 
     def get_products_count(self, obj):
         return obj.sales.values('item').distinct().count()

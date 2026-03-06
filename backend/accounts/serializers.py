@@ -2,8 +2,10 @@ from django.db import transaction
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings as django_settings
 from django.contrib.auth.hashers import check_password
-from djoser.serializers import (UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer,
-                                TokenCreateSerializer as BaseTokenCreateSerializer)
+from djoser.serializers import (
+    UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer,
+    TokenCreateSerializer as BaseTokenCreateSerializer,
+)
 from djoser.utils import decode_uid
 from rest_framework import serializers
 from core.models import Company
@@ -443,3 +445,16 @@ class OTPResetSerializer(serializers.Serializer):
         user.set_password(self.validated_data['new_password'])
         user.save()
 
+class CurrentUserSerializer(serializers.ModelSerializer):
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "avatar"]
+
+    def get_avatar(self, obj):
+        request = self.context.get("request")
+        avatar = obj.profile.avatar
+        if avatar:
+            return request.build_absolute_uri(avatar.url)
+        return None

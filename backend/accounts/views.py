@@ -17,7 +17,7 @@ from .serializers import (OTPVerifySerializer,
                           ProfileSerializer,
                           EmployeeCreateSerializer,
                           LogoutSerializer,
-                          OTPResetSerializer)
+                          OTPResetSerializer,CurrentUserSerializer)
 from .utils import send_activation_email
 from .permissions import IsBusinessAdmin,IsBusinessOrAdmin
 from rest_framework.viewsets import GenericViewSet
@@ -191,6 +191,10 @@ class EmployeeCreateViewSet(mixins.CreateModelMixin, GenericViewSet):
     serializer_class = EmployeeCreateSerializer
     permission_classes = [IsAuthenticated]
 
+class CurrentUserViewSet(viewsets.ModelViewSet):
+    serializer_class = CurrentUserSerializer
+    http_method_names = ['get']
 
+    def get_queryset(self):
+        return User.objects.filter(id=self.request.user.id)
     
-

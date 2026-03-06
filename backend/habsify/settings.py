@@ -167,10 +167,10 @@ OTP_EXPIRY_SECONDS=60*60
 OTP_MAX_ATTEMPTS=5
 
 REST_FRAMEWORK = {
-    'DEFAULT_THROTTLE_RATES': {
-        'subscriptions_global': '20/minute',    
-        'subscribe_and_pay': '3/hour',       
-    },
+    # 'DEFAULT_THROTTLE_RATES': {
+    #     'subscriptions_global': '20/minute',    
+    #     'subscribe_and_pay': '3/hour',       
+    # },
     'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -182,6 +182,9 @@ REST_FRAMEWORK = {
         'rest_framework.filters.OrderingFilter',
     ],
     'EXCEPTION_HANDLER': 'core.exceptions.custom_exception_handler',
+    'DEFAULT_PERMISSION_CLASSES': [
+        'crm.permissions.HasActiveSubscription',
+    ]
     # 'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
     # 'DEFAULT_RENDERER_CLASSES': [
     #     'rest_framework.renderers.JSONRenderer',

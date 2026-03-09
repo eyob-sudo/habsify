@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter,SearchFilter
 from sales_purchases.models import Sale
 from .models import Customer, Interaction
-from .serializers import CustomerSerializer, InteractionSerializer,CustomerTransactionHistorySerializer
+from .serializers import CustomerSerializer, InteractionSerializer,CustomerTransactionHistorySerializer,CustomerDropdownSerializer
 from .permissions import HasActiveSubscription,IsOwnerOrEmployee,IsBusinessAdmin
 from .utils import export_customer_history
 from .pagination import CustomerPagination
@@ -134,4 +134,14 @@ class InteractionViewSet(viewsets.ModelViewSet):
                 return [IsBusinessAdmin()]
         return super().get_permissions()
     
-    
+class CustomerDropdownViewSet(viewsets.ReadOnlyModelViewSet):
+    serializer_class = CustomerDropdownSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if not hasattr(user, "company") or user.company is None:
+            return Customer.objects.none()
+
+        return Customer.objects.filter(company=user.company).only("id", "name", "phone")
+       

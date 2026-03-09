@@ -88,3 +88,14 @@ class InteractionSerializer(serializers.ModelSerializer):
         model = Interaction
         fields = '__all__'
         read_only_fields = ['customer', 'created_by', 'date']
+
+class CustomerDropdownSerializer(serializers.ModelSerializer):
+    label = serializers.SerializerMethodField() 
+
+    def get_label(self, obj):
+        phone = obj.phone or "No phone"
+        return f"{obj.name} | {phone}"
+    
+    class Meta:
+        model = Customer
+        fields = ["id","label"]

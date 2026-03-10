@@ -18,6 +18,7 @@ urlpatterns = [
     path('finance/',include('finance.urls')), 
     path('api/',include('analytics.urls')), 
     path('notifications/',include('notifications.urls')), 
+    path('api/tasks/', include('tasks.urls')),
 ]
 
 from django.conf import settings

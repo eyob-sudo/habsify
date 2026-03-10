@@ -1,6 +1,7 @@
 from django.db import models
 from django.utils import timezone
-from core.models import Company, User
+from core.models import Company
+from accounts.models import User
 
 class Task(models.Model):
     PRIORITY_CHOICES = [

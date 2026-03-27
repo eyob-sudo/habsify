@@ -215,3 +215,49 @@ __marimo__/
 # Backend environment variables
 .env.backend
 README.md
+
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Vite files
+.vite/
+
+# Cache
+.cache/
+.parcel-cache/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+
+# TypeScript
+*.tsbuildinfo
+
+# Coverage
+coverage/
+
+# Optional lock files (keep ONE depending on your package manager)
+# package-lock.json
+# yarn.lock
+# pnpm-lock.yaml
+docker-run.sh
+scripts/

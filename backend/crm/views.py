@@ -21,6 +21,7 @@ class CustomerViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, HasActiveSubscription, IsOwnerOrEmployee]
     filter_backends = [OrderingFilter, SearchFilter]
     search_fields = ['name', 'created_at']
+    ordering = ["-created_at"]
     ordering_fields = ['name', 'created_at', 'products_count', 'address', 'latest_sale', 'balance']
     pagination_class = CustomerPagination
 

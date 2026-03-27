@@ -42,18 +42,30 @@ class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
     def get_payable(self,obj):
         return  float(obj.total)
     
-    def get_payment_received(self,obj):
+    def get_payment_received(self, obj):
         payments = obj.transactions.all().order_by('date')
-        return ', '.join([f"{t.amount} via {t.account.name} on {t.date.strftime('%Y-%m-%d')}" for t in payments]) if payments else "0"
+        if not payments:
+            return "0"
+
+        parts = []
+        for t in payments:
+            sign = "+" if t.type == 'inflow' else "-"
+            bank_name = t.account.name if t.account else "Unknown"
+            date_str = t.date.strftime('%Y-%m-%d')
+            parts.append(f"{sign}{t.amount} via {bank_name} on {date_str}")
+
+        return ', '.join(parts)
 
     def get_bank(self,obj):
         payments = obj.transactions.all().order_by('date')
         return ', '.join(set([t.account.name for t in payments if t.account])) if payments else "N/A"
     
-    def get_remain(self,obj):
-        payments = obj.transactions.all().order_by('date')
-        paid = payments.aggregate(Sum('amount'))['amount__sum'] or 0
-        return obj.total - paid
+    def get_remain(self, obj):
+        inflows = obj.transactions.filter(type='inflow').aggregate(Sum('amount'))['amount__sum'] or 0
+        outflows = obj.transactions.filter(type='outflow').aggregate(Sum('amount'))['amount__sum'] or 0
+        net_paid = inflows - outflows          
+        remain = obj.total - net_paid
+        return float(remain)
 
 
 class CustomerSerializer(serializers.ModelSerializer):

@@ -61,9 +61,13 @@ class AuthViewSet(GenericViewSet):
             user.is_active = True
             if otp.type == OTPCode.TYPE_SMS:
                 user.is_phone_verified = True
-                phone = user.phone_numbers.first()
+                phone = getattr(user, "phone_numbers", None)
+
                 if phone:
-                    phone.mark_verified()
+                    try:
+                        phone.mark_verified()
+                    except Exception:
+                        pass
             else:
                 user.is_email_verified = True
             user.save()
@@ -193,6 +197,7 @@ class EmployeeCreateViewSet(mixins.CreateModelMixin, GenericViewSet):
 
 class CurrentUserViewSet(viewsets.ModelViewSet):
     serializer_class = CurrentUserSerializer
+    permission_classes = [IsAuthenticated]
     http_method_names = ['get']
 
     def get_queryset(self):

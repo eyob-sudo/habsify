@@ -261,3 +261,4 @@ coverage/
 # pnpm-lock.yaml
 docker-run.sh
 scripts/
+.vscode/

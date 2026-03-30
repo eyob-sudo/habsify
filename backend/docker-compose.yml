@@ -1,0 +1,29 @@
+services:
+  web:
+    build: .
+    container_name: habsify_backend
+    env_file:
+      - .env.pro
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["uv", "run", "gunicorn", "habsify.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--threads", "2", "--log-level", "info"]
+
+  celery_worker:
+    build: .
+    container_name: habsify_celery_worker
+    env_file:
+      - .env.pro
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["uv", "run", "celery", "-A", "habsify", "worker", "-l", "info", "--pool=threads"]
+    restart: unless-stopped
+
+  celery_beat:
+    build: .
+    container_name: habsify_celery_beat
+    env_file:
+      - .env.pro
+    entrypoint: ["/app/entrypoint.sh"]
+    command: ["uv", "run", "celery", "-A", "habsify", "beat", "-l", "info"]
+    restart: unless-stopped

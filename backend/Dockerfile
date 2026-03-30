@@ -23,6 +23,8 @@ RUN uv venv --python /usr/local/bin/python3.12 .venv \
 
 COPY . .
 
+RUN uv run python manage.py collectstatic --noinput --clear
+
 RUN chmod +x entrypoint.sh
 
 ENTRYPOINT ["/app/entrypoint.sh"]

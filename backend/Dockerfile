@@ -21,9 +21,19 @@ RUN uv venv --python /usr/local/bin/python3.12 .venv \
     && . .venv/bin/activate \
     && uv sync --frozen
 
+# Copy the rest of the code
 COPY . .
 
-RUN uv run python manage.py collectstatic --noinput --clear
+# Collect static files during build (with dummy env vars so it doesn't crash)
+RUN SECRET_KEY=dummy-build-secret \
+    DEBUG=True \
+    EMAIL_HOST=dummy \
+    EMAIL_HOST_USER=dummy \
+    EMAIL_HOST_PASSWORD=dummy \
+    TWILIO_ACCOUNT_SID=dummy \
+    TWILIO_AUTH_TOKEN=dummy \
+    TWILIO_PHONE_NUMBER=dummy \
+    uv run python manage.py collectstatic --noinput --clear
 
 RUN chmod +x entrypoint.sh
 

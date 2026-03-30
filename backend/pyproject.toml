@@ -23,4 +23,5 @@ dependencies = [
     "django-celery-beat>=2.1.0",
     "celery[redis]>=5.6.2",
     "django-cors-headers>=4.9.0",
+    "gunicorn",
 ]

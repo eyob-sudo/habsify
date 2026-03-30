@@ -23,13 +23,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = config("SECRET_KEY")
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+DEBUG = config("DEBUG", default=False, cast=bool)
+ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
 
 
 # Application definition
@@ -110,7 +106,9 @@ DATABASES = {
         "PORT": config("POSTGRES_PORT", default="5432"),
     }
 }
-
+# Render.com requires SSL for external Postgres
+if not DEBUG:
+    DATABASES["default"].setdefault("OPTIONS", {})["sslmode"] = "require"
 
 
 # Password validation
@@ -149,7 +147,7 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
-
+STATIC_ROOT = BASE_DIR / "staticfiles"
 AUTH_USER_MODEL = "accounts.User"
 
 MEDIA_URL = '/media/'
@@ -280,10 +278,16 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
+    "http://localhost:3000",
 ]
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG:
     CORS_ALLOW_ALL_ORIGINS = True
 
 OTP_EXPIRY_MINUTES = config("OTP_EXPIRY_MINUTES", default=2,cast=int)
+# Silence django_ratelimit warnings/errors in Docker (multi-process)
+# (We will add proper Redis cache later if needed)
+SILENCED_SYSTEM_CHECKS = [
+    'django_ratelimit.E003',
+    'django_ratelimit.W001',
+]

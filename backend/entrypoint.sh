@@ -3,8 +3,8 @@ set -e
 
 echo "🚀 Starting habsify backend..."
 
-# Run migrations ONLY for the web (Gunicorn) container
-if echo "$@" | grep -q "gunicorn"; then
+# Run migrations for web OR worker
+if echo "$@" | grep -q -E "gunicorn|celery"; then
     echo "→ Running migrations..."
     uv run python manage.py migrate --noinput
 fi

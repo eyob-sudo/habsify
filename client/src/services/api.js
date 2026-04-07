@@ -3,7 +3,7 @@ import { getToken } from './authService'
 import { attachGlobalErrorHandler } from './globalErrorHandler'
 
 const api = axios.create({
-    baseURL: 'http://localhost:8000',
+    baseURL: 'https://habsify-saas-07g4.onrender.com',
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',

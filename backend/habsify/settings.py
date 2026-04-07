@@ -281,7 +281,7 @@ CELERY_BEAT_SCHEDULE = {
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
-    "https://habsify-saas-4da4.onrender.com"
+    "https://habsifyerp.onrender.com"
 ]
 CORS_ALLOW_CREDENTIALS = True
 if DEBUG:

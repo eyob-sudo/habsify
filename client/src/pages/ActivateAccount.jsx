@@ -46,7 +46,7 @@ export default function ActivateAccount() {
         <div className="bg-white/90 backdrop-blur border border-gray-100 shadow-2xl rounded-2xl p-8 md:p-10">
           <div className="text-center mb-8">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-primary/10 mb-3">
-              <img src="/logo.png" alt="HabsifyLogo" className="w-12 h-12" />
+              <img src="../../public/logo.png" alt="HabsifyLogo" className="w-12 h-12" />
             </div>
             <h1 className="text-3xl font-['Roboto'] font-black text-primary mb-2">Account Activation</h1>
             <p className="text-gray-600 text-base">

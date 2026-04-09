@@ -33,10 +33,42 @@ function safeGetDetail(data) {
   return messages.join(', ')
 }
 export function handleApiError(error, options = {}) {
+  // If the request was blocked dynamically down at the axios level via ProtectedRoute:
+  if (error?.isClientCancellation) {
+    if (options.showToast !== false && !error.silent) {
+      const now = Date.now()
+      const isDuplicate = error.message === lastToast.message && (now - lastToast.ts) < DEDUPE_WINDOW_MS
+      if (!isDuplicate) {
+        toast.error(error.message)
+        lastToast = { message: error.message, ts: now }
+      }
+    }
+    return error.message
+  }
+
   try {
     const { showToast = true } = options
     const detail = safeGetDetail(error?.response?.data)
     const message = detail || GENERIC_MESSAGE
+
+    // Subscription checks
+    const status = error?.response?.status
+    const isSubscriptionError = status === 402 || status === 403 ||
+      message.toLowerCase().includes('subscription') ||
+      message.toLowerCase().includes('trial')
+
+    if (isSubscriptionError) {
+      if (showToast) {
+        const now = Date.now()
+        const dedupeMsg = 'Action restricted by subscription plan'
+        const isDuplicate = dedupeMsg === lastToast.message && (now - lastToast.ts) < DEDUPE_WINDOW_MS
+        if (!isDuplicate) {
+          toast.error(message || dedupeMsg)
+          lastToast = { message: dedupeMsg, ts: now }
+        }
+      }
+      return message
+    }
 
     if (showToast) {
       const now = Date.now()

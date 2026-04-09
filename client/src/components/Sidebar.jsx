@@ -1,71 +1,71 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import { useQuery } from '@tanstack/react-query'
 import { getSubscriptionPlans, getSubscriptions } from '../services/subscriptionService'
+import { cn } from '../utils/cn'
+import autoAnimate from '@formkit/auto-animate'
+import {
+  LayoutDashboard,
+  Truck,
+  Package,
+  Users,
+  CircleDollarSign,
+  Menu,
+  X
+} from 'lucide-react'
 
 export default function Sidebar() {
   const navigate = useNavigate()
   const [showPlans, setShowPlans] = useState(false)
   const [isOpen, setIsOpen] = useState(false)
-  const [subscriptionData, setSubscriptionData] = useState({
-    plans: [],
-    currentPlanId: null,
-    trialDaysRemaining: 0,
-    usage: { used: 0, limit: 0, unit: 'members' }
+
+  // PHASE 9: React Query Data Fetching Strategy Optimization
+  const { data: subscriptionData, isFetching: loadingPlans } = useQuery({
+    queryKey: ['sidebar-subscriptions'],
+    queryFn: async () => {
+      const [plansRes, subsRes] = await Promise.all([
+        getSubscriptionPlans(),
+        getSubscriptions()
+      ])
+      const plans = Array.isArray(plansRes) ? plansRes : []
+      const subscriptions = Array.isArray(subsRes) ? subsRes : []
+      const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0]
+      const currentPlanId = activeSub?.plan?.id || null
+      const trialDaysRemaining = activeSub?.days_remaining ?? 0
+      const usageLimit = activeSub?.plan?.user_limit ?? 0
+      const usageRaw = typeof activeSub?.members_usage === 'string' ? activeSub.members_usage : ''
+      const usageMatch = usageRaw.match(/(\d+)\s*\/\s*(\d+)/)
+      const usageUsed = usageMatch ? Number(usageMatch[1]) : 0
+      const usageUnit = usageRaw.includes('member') ? 'members' : 'members'
+
+      return {
+        plans,
+        currentPlanId,
+        trialDaysRemaining,
+        usage: { used: usageUsed, limit: usageLimit, unit: usageUnit }
+      }
+    },
+    initialData: { plans: [], currentPlanId: null, trialDaysRemaining: 0, usage: { used: 0, limit: 0, unit: 'members' } },
+    staleTime: 5 * 60 * 1000 // Cache for 5 mins
   })
-  const [loadingPlans, setLoadingPlans] = useState(false)
+
+  // Hook up Phase 4: Fluid DOM animations for the Sidebar links
+  const menuRef = useRef(null)
+  useEffect(() => {
+    if (menuRef.current) {
+      autoAnimate(menuRef.current)
+    }
+  }, [menuRef])
 
   const linkClass = ({ isActive }) => isActive
     ? 'w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg bg-primary text-white'
     : 'w-full flex items-center gap-3 px-4 py-3 text-left rounded-lg text-gray-700 hover:bg-gray-50 hover:text-primary'
 
-  useEffect(() => {
-    let alive = true
-    async function loadSubscriptions() {
-      setLoadingPlans(true)
-      try {
-        const [plansRes, subsRes] = await Promise.all([
-          getSubscriptionPlans(),
-          getSubscriptions()
-        ])
-        if (!alive) return
-        const plans = Array.isArray(plansRes) ? plansRes : []
-        const subscriptions = Array.isArray(subsRes) ? subsRes : []
-        const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0]
-        const currentPlanId = activeSub?.plan?.id || null
-        const trialDaysRemaining = activeSub?.days_remaining ?? 0
-        const usageLimit = activeSub?.plan?.user_limit ?? 0
-        const usageRaw = typeof activeSub?.members_usage === 'string' ? activeSub.members_usage : ''
-        const usageMatch = usageRaw.match(/(\d+)\s*\/\s*(\d+)/)
-        const usageUsed = usageMatch ? Number(usageMatch[1]) : 0
-        const usageUnit = usageRaw.includes('member') ? 'members' : 'members'
-
-        setSubscriptionData({
-          plans,
-          currentPlanId,
-          trialDaysRemaining,
-          usage: {
-            used: usageUsed,
-            limit: usageLimit,
-            unit: usageUnit
-          }
-        })
-      } catch (err) {
-        if (alive) setSubscriptionData({ plans: [], currentPlanId: null, trialDaysRemaining: 0, usage: { used: 0, limit: 0, unit: 'members' } })
-      } finally {
-        if (alive) setLoadingPlans(false)
-      }
-    }
-    loadSubscriptions()
-    return () => {
-      alive = false
-    }
-  }, [])
-
-  const currentPlan = subscriptionData.plans.find((plan) => plan.id === subscriptionData.currentPlanId)
+  const currentPlan = subscriptionData.plans?.find((plan) => plan.id === subscriptionData.currentPlanId)
 
   const featureList = Array.from(
     new Map(
-      subscriptionData.plans.flatMap((plan) => {
+      subscriptionData.plans?.flatMap((plan) => {
         if (Array.isArray(plan.features)) {
           return plan.features.map((feature) => [feature.code || feature.name, feature.name || feature.code])
         }
@@ -99,11 +99,12 @@ export default function Sidebar() {
 
   return (
     <>
+      {/* PHASE 10: Swapped to Lucide Icons */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="md:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center text-gray-700"
       >
-        <i className={isOpen ? "ri-close-line ri-lg" : "ri-menu-line ri-lg"}></i>
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
       </button>
 
       {isOpen && (
@@ -113,36 +114,39 @@ export default function Sidebar() {
         ></div>
       )}
 
-      <aside className={`fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-100 z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}`}>
-        <nav className="p-6 pt-20 h-full flex flex-col">
-          <ul className="space-y-2">
+      <aside className={cn(
+        "fixed left-0 top-0 h-screen w-64 bg-white border-r border-gray-100 z-40 transition-transform duration-300 ease-in-out flex flex-col",
+        isOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+      )}>
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-6 pt-20">
+          <ul ref={menuRef} className="space-y-2">
             <li>
               <NavLink to="/dashboard" className={linkClass} onClick={closeSidebar} end>
-                <div className="w-5 h-5 flex items-center justify-center"><i className="ri-dashboard-line"></i></div>
+                <div className="w-5 h-5 flex items-center justify-center"><LayoutDashboard size={20} /></div>
                 <span>Dashboard</span>
               </NavLink>
             </li>
             <li>
               <NavLink to="/suppliers" className={linkClass} onClick={closeSidebar}>
-                <div className="w-5 h-5 flex items-center justify-center"><i className="ri-truck-line"></i></div>
+                <div className="w-5 h-5 flex items-center justify-center"><Truck size={20} /></div>
                 <span>Supplier</span>
               </NavLink>
             </li>
             <li>
               <NavLink to="/inventory" className={linkClass} onClick={closeSidebar}>
-                <div className="w-5 h-5 flex items-center justify-center"><i className="ri-archive-line"></i></div>
+                <div className="w-5 h-5 flex items-center justify-center"><Package size={20} /></div>
                 <span>Inventory</span>
               </NavLink>
             </li>
             <li>
               <NavLink to="/crm" className={linkClass} onClick={closeSidebar}>
-                <div className="w-5 h-5 flex items-center justify-center"><i className="ri-user-heart-line"></i></div>
+                <div className="w-5 h-5 flex items-center justify-center"><Users size={20} /></div>
                 <span>CRM</span>
               </NavLink>
             </li>
             <li>
               <NavLink to="/finance" className={linkClass} onClick={closeSidebar}>
-                <div className="w-5 h-5 flex items-center justify-center"><i className="ri-money-dollar-circle-line"></i></div>
+                <div className="w-5 h-5 flex items-center justify-center"><CircleDollarSign size={20} /></div>
                 <span>Finance</span>
               </NavLink>
             </li>
@@ -167,7 +171,7 @@ export default function Sidebar() {
               </button>
             </div>
           </div>
-        </nav>
+        </div>
       </aside>
 
       {showPlans && (
@@ -184,7 +188,7 @@ export default function Sidebar() {
                 className="w-9 h-9 rounded-full bg-gray-100 text-gray-500 hover:text-gray-700 hover:bg-gray-200 transition-colors flex items-center justify-center"
                 aria-label="Close"
               >
-                <i className="ri-close-line ri-lg"></i>
+                <X size={20} />
               </button>
             </div>
 

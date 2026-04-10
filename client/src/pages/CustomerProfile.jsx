@@ -91,11 +91,11 @@ export default function CustomerProfile() {
     try {
       const svc = await import('../services/crmService')
       await svc.exportCustomerTransactions(id, format)
-      toast.dismiss(t)
+      if (t && t.dismiss) t.dismiss()
       toast.success('Export downloaded')
     } catch (err) {
       console.error('Export error', err)
-      toast.dismiss(t)
+      if (t && t.dismiss) t.dismiss()
       toast.error('Failed to export')
     } finally {
       setExportOpen(false)

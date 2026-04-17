@@ -11,10 +11,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: akhileshns/heroku-deploy@v3.15.15  
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY_CLIENT }}
-          heroku_app_name: ${{ secrets.HEROKU_APP_NAME_CLIENT }}
-          heroku_email: ${{ secrets.HEROKU_EMAIL_CLIENT }}
-          appdir: "client"
-          buildpack: "heroku/nodejs"
+      - name: Install Heroku CLI
+        run: curl https://cli-assets.heroku.com/install-ubuntu.sh | sh
+
+      - name: Deploy Client to Heroku
+        env:
+          HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY_CLIENT }}
+          HEROKU_APP_NAME: ${{ secrets.HEROKU_APP_NAME_CLIENT }}
+          HEROKU_EMAIL: ${{ secrets.HEROKU_EMAIL_CLIENT }}
+        run: |
+          # Login to Heroku
+          echo "machine api.heroku.com" > ~/.netrc
+          echo "login $HEROKU_EMAIL" >> ~/.netrc
+          echo "password $HEROKU_API_KEY" >> ~/.netrc
+          chmod 600 ~/.netrc
+
+          # Copy only the client folder and deploy
+          mkdir -p /tmp/client-deploy
+          cp -r client/. /tmp/client-deploy/
+
+          cd /tmp/client-deploy
+
+          git init
+          git add .
+          git commit -m "Auto-deploy from GitHub Actions"
+
+          heroku git:remote -a $HEROKU_APP_NAME
+          git push heroku HEAD:main --force

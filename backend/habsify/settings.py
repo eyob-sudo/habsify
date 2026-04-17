@@ -217,6 +217,7 @@ CELERY_BEAT_SCHEDULE = {
 # CORS (Fixed for your React frontend)
 # ==============================================================================
 CORS_ALLOWED_ORIGINS = [
+    "https://habsify-54f41bb3faf3.herokuapp.com",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
     "http://localhost:3000",

@@ -43,6 +43,7 @@ jobs:
           git add .
           git commit -m "Auto-deploy client from GitHub Actions - ${GITHUB_SHA::8}"
 
+          
           # 5. Push to Heroku
           # We add the remote and force push the local 'main' to Heroku's 'main'
           git remote add heroku https://git.heroku.com/$HEROKU_APP_NAME.git

@@ -223,6 +223,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://habsifyerp.onrender.com",
 ]
+CSRF_TRUSTED_ORIGINS = [
+    "https://habsify-54f41bb3faf3.herokuapp.com",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]

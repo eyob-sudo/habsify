@@ -2,10 +2,12 @@ from django.db import transaction
 from django.contrib.auth.tokens import default_token_generator
 from django.conf import settings as django_settings
 from django.contrib.auth.hashers import check_password
+from rest_framework.exceptions import AuthenticationFailed
 from djoser.serializers import (
     UserCreatePasswordRetypeSerializer as BaseUserCreatePasswordRetypeSerializer,
-    TokenCreateSerializer as BaseTokenCreateSerializer,
+    TokenCreateSerializer as BaseTokenCreateSerializer
 )
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from djoser.utils import decode_uid
 from rest_framework import serializers
 from core.models import Company
@@ -19,6 +21,28 @@ from subscriptions.models import Subscription
 from datetime import timedelta
 from phonenumber_field.serializerfields import PhoneNumberField
 
+
+class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except AuthenticationFailed:
+            raise AuthenticationFailed(
+                detail="Invalid email or password",
+                code="invalid_credentials"
+            )
+
+
+class CustomTokenCreateSerializer(BaseTokenCreateSerializer):
+    def validate(self, attrs):
+        try:
+            return super().validate(attrs)
+        except AuthenticationFailed:
+            raise AuthenticationFailed(
+                detail="Invalid email or password",
+                code="invalid_credentials"
+            )
+        
 
 class CompanySerializer(serializers.ModelSerializer):
     class Meta:

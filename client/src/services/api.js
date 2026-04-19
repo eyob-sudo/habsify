@@ -3,7 +3,7 @@ import { getToken } from './authService'
 import { attachGlobalErrorHandler } from './globalErrorHandler'
 
 const api = axios.create({
-    baseURL: 'http://localhost:8000',
+    baseURL: 'https://habsifybackend-prod-7a317b11fa8d.herokuapp.com',
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',

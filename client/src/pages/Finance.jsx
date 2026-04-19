@@ -24,8 +24,16 @@ const accountSchema = z.object({
   name: z.string().min(1, 'Short name is required'),
   full_name: z.string().min(1, 'Full name is required'),
   account_type: z.enum(['bank', 'cash']),
-  account_number: z.string().min(1, 'Account number/identifier is required')
-})
+  account_number: z.string().optional().nullable()
+}).refine(data => {
+  if (data.account_type === 'bank' && (!data.account_number || data.account_number.trim().length === 0)) {
+    return false;
+  }
+  return true;
+}, {
+  message: 'Account number is required for bank accounts',
+  path: ['account_number']
+});
 
 export default function Finance() {
   const queryClient = useQueryClient()
@@ -34,10 +42,12 @@ export default function Finance() {
   const [accountModalOpen, setAccountModalOpen] = useState(false)
   const [editingAccount, setEditingAccount] = useState(null)
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, watch, formState: { errors } } = useForm({
     resolver: zodResolver(accountSchema),
     defaultValues: { name: '', full_name: '', account_type: 'bank', account_number: '' }
   })
+
+  const accountType = watch('account_type')
 
   // Debouncing Search
   useEffect(() => {
@@ -87,19 +97,8 @@ export default function Finance() {
   const expenses = stats?.total_expenses
   const statsCash = stats?.cash_on_hand
 
-  const cashAccounts = accounts.filter(a => a.account_type === 'cash')
-  const bankAccounts = accounts.filter(a => a.account_type === 'bank')
-
-  const cashWithId = cashAccounts.length > 0 ? {
-    ...cashAccounts[0],
-    id: cashAccounts[0].id,
-    account_type: 'cash'
-  } : null
-
-  const banksWithIds = bankAccounts.map((acct) => {
-    return { ...acct, id: acct.id, account_type: 'bank' }
-  })
-
+  const cashAccounts = accounts.filter(a => a.account_type === 'cash').map(acct => ({ ...acct, id: acct.id, account_type: 'cash' }))
+  const bankAccounts = accounts.filter(a => a.account_type === 'bank').map(acct => ({ ...acct, id: acct.id, account_type: 'bank' }))
 
   const loadingStatsLocal = loadingStats || loadingAccounts
 
@@ -156,11 +155,12 @@ export default function Finance() {
   }
 
   function onSubmit(formData) {
+    const payload = { ...formData, account_number: formData.account_type === 'cash' ? '' : formData.account_number }
     const targetId = editingAccount?.id || editingAccount?.account_id;
     if (editingAccount && targetId) {
-      updateAccountMutator.mutate({ id: targetId, payload: { ...formData, id: targetId } })
+      updateAccountMutator.mutate({ id: targetId, payload: { ...payload, id: targetId } })
     } else {
-      createAccountMutator.mutate(formData)
+      createAccountMutator.mutate(payload)
     }
   }
 
@@ -232,12 +232,13 @@ export default function Finance() {
                 </div>
               </motion.div>
 
-              {/* Cash on Hand Card */}
-              {cashWithId && (
+              {/* Cash on Hand Cards */}
+              {cashAccounts.map((cashAcct, i) => (
                   <motion.div
+                      key={cashAcct.id || `cash-${i}`}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.2 }}
+                      transition={{ delay: 0.2 + (i * 0.05) }}
                       className="bg-white rounded-2xl shadow-sm border border-green-100 p-6 md:p-8 relative overflow-hidden group hover:border-green-200 transition-colors"
                   >
                     <div className="absolute -right-6 -top-6 w-24 h-24 bg-green-50 rounded-full opacity-50 group-hover:scale-125 transition-transform duration-500"></div>
@@ -247,7 +248,7 @@ export default function Finance() {
                       </div>
                       <div className="flex items-center gap-2">
                         <button
-                            onClick={(e) => openEditAccount(cashWithId, e)}
+                            onClick={(e) => openEditAccount(cashAcct, e)}
                             className="w-8 h-8 rounded-full border bg-white flex items-center justify-center text-gray-400 hover:text-primary hover:border-primary/30 transition-colors shadow-sm"
                             title="Edit Account"
                         >
@@ -256,13 +257,13 @@ export default function Finance() {
                         <span className="text-xs font-semibold tracking-wider text-green-400 uppercase">Storage</span>
                       </div>
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1 relative shrink">{cashWithId?.full_name || cashWithId?.name || cashWithId?.label || statsCash?.label || 'Physical Currency'}</h3>
-                    <p className="text-3xl font-black text-green-600 mb-2 relative">{loadingStatsLocal ? '...' : formatMoney(cashWithId?.balance ?? cashWithId?.amount ?? 0)}</p>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1 relative shrink truncate" title={cashAcct.full_name}>{cashAcct.full_name || cashAcct.name || cashAcct.label || 'Physical Currency'}</h3>
+                    <p className="text-3xl font-black text-green-600 mb-2 relative">{loadingStatsLocal ? '...' : formatMoney(cashAcct.balance ?? cashAcct.amount ?? 0)}</p>
                   </motion.div>
-              )}
+              ))}
 
               {/* Bank Nodes */}
-              {banksWithIds.map((bank, i) => (
+              {bankAccounts.map((bank, i) => (
                   <motion.div
                       key={bank.id || `bank-${i}`}
                       initial={{ opacity: 0, y: 20 }}
@@ -361,15 +362,17 @@ export default function Finance() {
                         </select>
                       </div>
 
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Account Number / ID</label>
-                        <input
-                            {...register('account_number')}
-                            className={cn("w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20", errors.account_number ? "border-red-500" : "border-gray-200 focus:border-primary")}
-                            placeholder="1000500..."
-                        />
-                        {errors.account_number && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.account_number.message}</p>}
-                      </div>
+                      {accountType === 'bank' && (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Account Number / ID</label>
+                          <input
+                              {...register('account_number')}
+                              className={cn("w-full px-4 py-3 border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20", errors.account_number ? "border-red-500" : "border-gray-200 focus:border-primary")}
+                              placeholder="1000500..."
+                          />
+                          {errors.account_number && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.account_number.message}</p>}
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex gap-4 pt-6 border-t border-gray-100">

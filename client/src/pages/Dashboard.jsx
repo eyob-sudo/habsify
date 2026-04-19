@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
+import api from '../services/api'
 import { getSuppliers, getItems, getWarehouses, createPurchase } from '../services/inventoryService';
 import { getAccounts, createExpense } from '../services/financeService';
 import { getCustomers, createSale } from '../services/salesService';
@@ -53,7 +54,7 @@ export default function Dashboard() {
       const results = await Promise.allSettled([
         getBusinessKpis(), getFinancialOverview(), getTopProducts(), getTopCustomers(),
         getTopSuppliers(), getTopProductsChart(), getCustomerGrowth(), getRecentActivity(),
-        getSuppliers(), getCustomers(), getItems(), getWarehouses(), getAccounts(), getUsers(),
+        api.get('/sales-purchases/suppliers/dropdown/'), api.get('/crm/customers-dropdown/'), api.get('/sales-purchases/items/dropdown/'), api.get('/sales-purchases/warehouses/dropdown/'), getAccounts(), getUsers(),
         getPaymentMethods()
       ])
 
@@ -691,19 +692,16 @@ export default function Dashboard() {
                                           setSellForm({
                                             ...sellForm,
                                             item: e.target.value,
-                                            unit_price: selectedItem ? selectedItem.unit_price.toString() : ''
+                                            unit_price: selectedItem?.unit_price != null ? String(selectedItem.unit_price) : sellForm.unit_price
                                           });
                                         }}
                                         className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-primary"
                                     >
-                                      <option value="">Select Product</option>
-                                      {(asArray(data?.items)).map(item => (
-                                          <option key={item.id} value={item.id}>{item.name}</option>
+                                      <option value="">Select Item</option>
+                                      {(asArray(data?.items)).map(i => (
+                                          <option key={i.id} value={i.id}>{i.name || i.label || `Item ${i.id}`}</option>
                                       ))}
                                     </select>
-                                    {asArray(data?.items).length === 0 && (
-                                      <p className="text-xs text-gray-500 mt-2">No products found.</p>
-                                    )}
                                   </div>
                                 </div>
 
@@ -816,14 +814,14 @@ export default function Dashboard() {
                                           setBuyForm({
                                             ...buyForm,
                                             item: e.target.value,
-                                            unit_price: selectedItem ? selectedItem.unit_price.toString() : ''
+                                            unit_price: selectedItem?.unit_price != null ? String(selectedItem.unit_price) : buyForm.unit_price
                                           });
                                         }}
                                         className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:border-primary"
                                     >
                                       <option value="">Select Product</option>
                                       {(asArray(data?.items)).map(item => (
-                                          <option key={item.id} value={item.id}>{item.name}</option>
+                                          <option key={item.id} value={item.id}>{item.name || item.label || `Item ${item.id}`}</option>
                                       ))}
                                     </select>
                                     {asArray(data?.items).length === 0 && (
@@ -1004,27 +1002,27 @@ export default function Dashboard() {
                                 let payload
                                 if (selectedType === 'buy') {
                                   payload = {
-                                    supplier: buyForm.supplier,
-                                    item: buyForm.item,
+                                    supplier: Number(buyForm.supplier),
+                                    item: Number(buyForm.item),
                                     quantity: Number(buyForm.quantity),
                                     unit_price: Number(buyForm.unit_price),
-                                    warehouse: buyForm.warehouse,
+                                    warehouse: Number(buyForm.warehouse),
                                     status: buyForm.status,
                                     notes: buyForm.notes,
-                                    payment_method: buyForm.payment_method ? buyForm.payment_method : null,
-                                    account: buyForm.account ? Number(buyForm.account) : undefined
+                                    payment_method: buyForm.status === 'unpaid' ? null : (buyForm.payment_method ? buyForm.payment_method : null),
+                                    account: buyForm.status === 'unpaid' ? null : (buyForm.account ? Number(buyForm.account) : null)
                                   }
                                 } else if (selectedType === 'sell') {
                                   payload = {
-                                    customer: sellForm.customer,
-                                    item: sellForm.item,
+                                    customer: Number(sellForm.customer),
+                                    item: Number(sellForm.item),
                                     quantity: Number(sellForm.quantity),
                                     unit_price: Number(sellForm.unit_price),
-                                    warehouse: sellForm.warehouse,
+                                    warehouse: Number(sellForm.warehouse),
                                     status: sellForm.status,
                                     notes: sellForm.notes,
-                                    payment_method: sellForm.payment_method ? sellForm.payment_method : null,
-                                    account: sellForm.account ? Number(sellForm.account) : undefined
+                                    payment_method: sellForm.status === 'unpaid' ? null : (sellForm.payment_method ? sellForm.payment_method : null),
+                                    account: sellForm.status === 'unpaid' ? null : (sellForm.account ? Number(sellForm.account) : null)
                                   }
                                 } else if (selectedType === 'expense') {
                                   payload = {

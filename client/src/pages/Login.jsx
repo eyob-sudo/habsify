@@ -19,9 +19,15 @@ const resendSchema = z.object({
 
 export default function Login() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const { login, isAuthenticated, loading } = useAuth()
   const [resendOpen, setResendOpen] = useState(false)
   const [resendStatus, setResendStatus] = useState('')
+
+  React.useEffect(() => {
+    if (!loading && isAuthenticated) {
+      navigate('/dashboard', { replace: true })
+    }
+  }, [loading, isAuthenticated, navigate])
 
   const {
     register: registerLogin,
@@ -60,6 +66,14 @@ export default function Login() {
     } catch (err) {
       toast.error('Failed to resend activation link')
     }
+  }
+
+  if (loading || isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+      </div>
+    )
   }
 
   return (

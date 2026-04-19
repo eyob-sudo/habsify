@@ -35,12 +35,13 @@ export async function createTask(payload) {
 }
 
 export async function updateTask(id, payload) {
-  const res = await api.patch(`/api/tasks/${id}/`, {
-    title: payload.title,
-    priority: payload.priority,
-    due_date: payload.dueDate || null,
-    completed: payload.completed
-  })
+  const submitData = {}
+  if (payload.title !== undefined) submitData.title = payload.title;
+  if (payload.priority !== undefined) submitData.priority = payload.priority;
+  if (payload.dueDate !== undefined) submitData.due_date = payload.dueDate || null;
+  if (payload.completed !== undefined) submitData.completed = payload.completed;
+
+  const res = await api.patch(`/api/tasks/${id}/`, submitData)
   return normalizeTask(res.data)
 }
 

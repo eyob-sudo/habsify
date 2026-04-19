@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react'
 import Header from '../components/Header'
 import Sidebar from '../components/Sidebar'
 import toast from '../services/toastService'
-import { getSubscriptionPlans, getSubscriptions, startFreeTrial, cancelSubscription, getPaymentMethods, getBankAccounts, subscribeAndPay } from '../services/subscriptionService'
+import { getSubscriptionPlans, getSubscriptions, startFreeTrial, cancelSubscription, getPaymentMethods, getBankAccounts, subscribeAndPay, getCompanyPlan } from '../services/subscriptionService'
 
 function formatPrice(plan) {
   if (typeof plan?.price_monthly === 'number') {
@@ -55,6 +55,7 @@ function getIncludedFeatures(plan) {
 export default function Subscription() {
   const [plans, setPlans] = useState([])
   const [currentSub, setCurrentSub] = useState(null)
+  const [companyPlan, setCompanyPlan] = useState(null)
   const [loading, setLoading] = useState(true)
   const [trialLoadingId, setTrialLoadingId] = useState(null)
   const [payModalOpen, setPayModalOpen] = useState(false)
@@ -73,20 +74,25 @@ export default function Subscription() {
     async function loadData() {
       setLoading(true)
       try {
-        const [plansRes, subsRes] = await Promise.all([
+        const [plansRes, subsRes, companyPlanRes] = await Promise.all([
           getSubscriptionPlans(),
-          getSubscriptions()
+          getSubscriptions(),
+          getCompanyPlan()
         ])
         if (!alive) return
+        const _rawCompany = companyPlanRes
+        const companyPlanParsed = Array.isArray(_rawCompany) ? _rawCompany[0] : (_rawCompany?.data ?? _rawCompany ?? null)
         const nextPlans = Array.isArray(plansRes) && plansRes.length ? plansRes : []
         const subscriptions = Array.isArray(subsRes) ? subsRes : []
         const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0] || null
         setPlans(nextPlans)
         setCurrentSub(activeSub)
+        setCompanyPlan(companyPlanParsed)
       } catch (err) {
         if (!alive) return
         setPlans([])
         setCurrentSub(null)
+        setCompanyPlan(null)
         toast.error('Failed to load subscription data')
       } finally {
         if (alive) setLoading(false)
@@ -101,7 +107,20 @@ export default function Subscription() {
   const currentPlanId = currentSub?.plan?.id
   const currentPlan = plans.find((plan) => plan.id === currentPlanId)
   const features = useMemo(() => getFeatureList(plans), [plans])
-  const usage = resolveUsage(currentSub) || { used: 0, limit: 0, unit: 'members' }
+
+  const usageUsed = companyPlan?.members_used ?? (() => {
+    const raw = typeof currentSub?.members_usage === 'string' ? currentSub.members_usage : ''
+    const match = raw.match(/(\d+)\s*\/\s*(\d+)/)
+    return match ? Number(match[1]) : 0
+  })()
+
+  const usageLimit = companyPlan?.max_members ?? currentSub?.plan?.user_limit ?? 0
+  const usageUnit = 'members'
+
+  const usage = { used: usageUsed, limit: usageLimit, unit: usageUnit }
+  const planName = companyPlan?.plan_name ?? currentSub?.plan?.name ?? '—'
+  const trialDaysRemaining = companyPlan?.days_remaining ?? currentSub?.days_remaining ?? 0
+
   const hasUsedTrial = Boolean(currentSub?.has_used_trial)
 
   const canStartTrial = Boolean(currentSub && currentSub.status !== 'active' && currentPlan?.trial_days && !hasUsedTrial)
@@ -140,10 +159,11 @@ export default function Subscription() {
     try {
       await startFreeTrial(plan.id)
       toast.success('Free trial started')
-      const subsRes = await getSubscriptions()
+      const [subsRes, companyRes] = await Promise.all([getSubscriptions(), getCompanyPlan()])
       const subscriptions = Array.isArray(subsRes) ? subsRes : []
       const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0] || null
       setCurrentSub(activeSub)
+      setCompanyPlan(companyRes)
     } catch (err) {
       toast.error('Failed to start free trial')
     } finally {
@@ -159,10 +179,11 @@ export default function Subscription() {
     try {
       await cancelSubscription(currentSub.uid)
       toast.success('Subscription cancelled')
-      const subsRes = await getSubscriptions()
+      const [subsRes, companyRes] = await Promise.all([getSubscriptions(), getCompanyPlan()])
       const subscriptions = Array.isArray(subsRes) ? subsRes : []
       const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0] || null
       setCurrentSub(activeSub)
+      setCompanyPlan(companyRes)
     } catch (err) {
       toast.error('Failed to cancel subscription')
     }
@@ -194,10 +215,11 @@ export default function Subscription() {
       })
       toast.success('Subscription request sent')
       setPayModalOpen(false)
-      const subsRes = await getSubscriptions()
+      const [subsRes, companyRes] = await Promise.all([getSubscriptions(), getCompanyPlan()])
       const subscriptions = Array.isArray(subsRes) ? subsRes : []
       const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0] || null
       setCurrentSub(activeSub)
+      setCompanyPlan(companyRes)
     } catch (err) {
       toast.error('Failed to submit payment')
     } finally {
@@ -312,7 +334,7 @@ export default function Subscription() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span>Members usage</span>
-                  <span className="font-semibold text-gray-900">{currentSub?.members_usage || '—'}</span>
+                  <span className="font-semibold text-gray-900">{usage.used} / {usage.limit} {usage.unit}</span>
                 </div>
               </div>
               <div className="mt-4 flex items-center gap-2 text-xs text-gray-500">

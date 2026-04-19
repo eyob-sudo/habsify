@@ -13,6 +13,16 @@ export async function getSubscriptions() {
   return res?.data ?? res
 }
 
+export async function getCompanyPlan() {
+  try {
+    const res = await api.get('/company/plan/')
+    return res?.data ?? res
+  } catch (err) {
+    console.error("Failed to fetch /company/plan/", err)
+    return null
+  }
+}
+
 export async function startFreeTrial(planId) {
   if (!planId) throw new Error('Plan id is required')
   const res = await api.post('/subscriptions/subscriptions/free_trial/', { plan_id: planId })

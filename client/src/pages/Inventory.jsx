@@ -124,11 +124,12 @@ export default function Inventory() {
       })
       return { previous }
     },
-    onSuccess: () => {
-      toast.success(`Warehouse ${editingWarehouse ? 'updated' : 'created'} successfully`)
-      queryClient.invalidateQueries({ queryKey: ['warehouses'] })
-      closeModal()
-    },
+  onSuccess: () => {
+    toast.success(`Warehouse ${editingWarehouse ? 'updated' : 'added'} successfully`)
+    queryClient.invalidateQueries({ queryKey: ['warehouses'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+    handleCloseModal()
+  },
     onError: (err, newWarehouse, context) => {
       if (context?.previous) {
         queryClient.setQueryData(['warehouses', page, debouncedSearch, ordering], context.previous)

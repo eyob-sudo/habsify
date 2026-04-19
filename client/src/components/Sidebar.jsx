@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { getSubscriptionPlans, getSubscriptions } from '../services/subscriptionService'
+import { getSubscriptionPlans, getSubscriptions, getCompanyPlan } from '../services/subscriptionService'
 import { cn } from '../utils/cn'
 import autoAnimate from '@formkit/auto-animate'
 import {
@@ -23,29 +23,41 @@ export default function Sidebar() {
   const { data: subscriptionData, isFetching: loadingPlans } = useQuery({
     queryKey: ['sidebar-subscriptions'],
     queryFn: async () => {
-      const [plansRes, subsRes] = await Promise.all([
+      const [plansRes, subsRes, companyPlanRes] = await Promise.allSettled([
         getSubscriptionPlans(),
-        getSubscriptions()
+        getSubscriptions(),
+        getCompanyPlan()
       ])
-      const plans = Array.isArray(plansRes) ? plansRes : []
-      const subscriptions = Array.isArray(subsRes) ? subsRes : []
+
+      const plans = plansRes.status === 'fulfilled' && Array.isArray(plansRes.value) ? plansRes.value : []
+      const subscriptions = subsRes.status === 'fulfilled' && Array.isArray(subsRes.value) ? subsRes.value : []
+      const _rawCompany = companyPlanRes.status === 'fulfilled' ? companyPlanRes.value : null
+      const companyPlan = Array.isArray(_rawCompany) ? _rawCompany[0] : (_rawCompany?.data ?? _rawCompany ?? null)
+
       const activeSub = subscriptions.find((sub) => sub.active) || subscriptions[0]
-      const currentPlanId = activeSub?.plan?.id || null
-      const trialDaysRemaining = activeSub?.days_remaining ?? 0
-      const usageLimit = activeSub?.plan?.user_limit ?? 0
-      const usageRaw = typeof activeSub?.members_usage === 'string' ? activeSub.members_usage : ''
-      const usageMatch = usageRaw.match(/(\d+)\s*\/\s*(\d+)/)
-      const usageUsed = usageMatch ? Number(usageMatch[1]) : 0
-      const usageUnit = usageRaw.includes('member') ? 'members' : 'members'
+
+      const planName = companyPlan?.plan_name || activeSub?.plan?.name || '—'
+      const currentPlanId = plans.find((p) => p.name === planName)?.id ?? activeSub?.plan?.id ?? null
+
+      const trialDaysRemaining = companyPlan?.days_remaining ?? activeSub?.days_remaining ?? 0
+      const usageLimit = companyPlan?.max_members ?? activeSub?.plan?.user_limit ?? 0
+
+      const usageUsed = companyPlan?.members_used ?? (() => {
+        const usageRaw = typeof activeSub?.members_usage === 'string' ? activeSub.members_usage : ''
+        const usageMatch = usageRaw.match(/(\d+)\s*\/\s*(\d+)/)
+        return usageMatch ? Number(usageMatch[1]) : 0
+      })()
 
       return {
         plans,
         currentPlanId,
+        planName,
         trialDaysRemaining,
-        usage: { used: usageUsed, limit: usageLimit, unit: usageUnit }
+        usage: { used: usageUsed, limit: usageLimit, unit: 'members' },
+        remainingMembers: companyPlan?.remaining_members ?? Math.max(0, usageLimit - usageUsed)
       }
     },
-    initialData: { plans: [], currentPlanId: null, trialDaysRemaining: 0, usage: { used: 0, limit: 0, unit: 'members' } },
+    placeholderData: { plans: [], currentPlanId: null, planName: '—', trialDaysRemaining: 0, usage: { used: 0, limit: 0, unit: 'members' }, remainingMembers: 0 },
     staleTime: 5 * 60 * 1000 // Cache for 5 mins
   })
 
@@ -156,11 +168,12 @@ export default function Sidebar() {
             <div className="rounded-xl border border-gray-100 bg-gray-50 p-3 text-xs">
               <div className="flex items-center justify-between">
                 <span className="text-gray-500">Plan</span>
-                <span className="font-semibold text-gray-900">{currentPlan?.name || '—'}</span>
+                <span className="font-semibold text-gray-900">{subscriptionData.planName}</span>
               </div>
-              <div className="mt-2 text-gray-600">
-                <div>Usage: {subscriptionData.usage.used}/{subscriptionData.usage.limit} {subscriptionData.usage.unit}</div>
-                <div>Trial: {subscriptionData.trialDaysRemaining} days left</div>
+              <div className="mt-2 text-gray-600 space-y-1">
+                <div className="flex justify-between"><span>Used:</span> <span>{subscriptionData.usage.used} / {subscriptionData.usage.limit}</span></div>
+                <div className="flex justify-between"><span>Remaining:</span> <span>{subscriptionData.remainingMembers}</span></div>
+                <div className="flex justify-between"><span>Trial:</span> <span>{subscriptionData.trialDaysRemaining} days left</span></div>
               </div>
               <button
                 type="button"

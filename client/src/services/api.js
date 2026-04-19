@@ -3,7 +3,7 @@ import { getToken } from './authService'
 import { attachGlobalErrorHandler } from './globalErrorHandler'
 
 const api = axios.create({
-    baseURL: 'https://habsifybackend-prod-7a317b11fa8d.herokuapp.com',
+    baseURL: 'http://localhost:8000',
     timeout: 10000,
     headers: {
         'Content-Type': 'application/json',
@@ -27,7 +27,7 @@ api.interceptors.request.use(
             // Only allow auth, user accounts, and subscription endpoints.
             // Using regex to ensure it strictly starts with these paths
             // (so it doesn't accidentally allow /finance/accounts/)
-            const isSafeRoute = /^\/?(subscriptions|accounts|auth)\//.test(config.url)
+            const isSafeRoute = /\/(subscriptions|accounts|auth|company)\//i.test(config.url)
 
             if (!isSafeRoute) {
                 // If attempting to write data, reject loudly

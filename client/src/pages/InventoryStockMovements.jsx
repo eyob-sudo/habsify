@@ -163,11 +163,12 @@ export default function InventoryStockMovements() {
       })
       return { previous }
     },
-    onSuccess: () => {
-      toast.success('Movement recorded successfully')
-      queryClient.invalidateQueries({ queryKey: ['stockMovements'] })
-      closeModal()
-    },
+onSuccess: () => {
+  toast.success('Movement recorded successfully')
+  queryClient.invalidateQueries({ queryKey: ['stockMovements'] })
+  queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+  closeModal()
+},
     onError: (err, newMovement, context) => {
       if (context?.previous) {
         queryClient.setQueryData(['stockMovements', page, debouncedSearch, ordering], context.previous)

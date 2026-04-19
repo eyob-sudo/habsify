@@ -114,11 +114,12 @@ export default function CRM() {
       if (editingCustomer) return updateCustomer(editingCustomer.id, payload)
       return createCustomer(payload)
     },
-    onSuccess: () => {
-      toast.success(`Customer ${editingCustomer ? 'updated' : 'added'} successfully`)
-      queryClient.invalidateQueries({ queryKey: ['crmCustomers'] }) // Smart self-healing UI
-      handleCloseModal()
-    },
+  onSuccess: () => {
+    toast.success(`Customer ${editingCustomer ? 'updated' : 'added'} successfully`)
+    queryClient.invalidateQueries({ queryKey: ['crmCustomers'] }) // Smart self-healing UI
+    queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+    handleCloseModal()
+  },
     onError: () => toast.error('Check your form fields or network connection')
   })
 

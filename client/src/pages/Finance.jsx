@@ -116,12 +116,13 @@ export default function Finance() {
 
   const updateAccountMutator = useMutation({
     mutationFn: async ({ id, payload }) => updateAccount(id, payload),
-    onSuccess: () => {
-      toast.success('Account updated successfully')
-      queryClient.invalidateQueries({ queryKey: ['financeStats'] })
-      queryClient.invalidateQueries({ queryKey: ['financeAccounts'] })
-      closeModal()
-    },
+  onSuccess: () => {
+    toast.success('Account updated successfully')
+    queryClient.invalidateQueries({ queryKey: ['financeStats'] })
+    queryClient.invalidateQueries({ queryKey: ['financeAccounts'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+    closeModal()
+  },
     onError: () => toast.error('Failed to update account')
   })
 
@@ -255,14 +256,8 @@ export default function Finance() {
                         <span className="text-xs font-semibold tracking-wider text-green-400 uppercase">Storage</span>
                       </div>
                     </div>
-                    <h3 className="text-sm font-semibold text-gray-900 mb-1 relative shrink">{cashWithId?.label || statsCash?.label || 'Physical Currency'}</h3>
+                    <h3 className="text-sm font-semibold text-gray-900 mb-1 relative shrink">{cashWithId?.full_name || cashWithId?.name || cashWithId?.label || statsCash?.label || 'Physical Currency'}</h3>
                     <p className="text-3xl font-black text-green-600 mb-2 relative">{loadingStatsLocal ? '...' : formatMoney(cashWithId?.balance ?? cashWithId?.amount ?? 0)}</p>
-                    <div className="flex justify-between items-center relative mt-4">
-                      <Link to="/finance/table" className="text-xs font-semibold text-green-600 flex items-center gap-1 hover:text-green-700 transition-colors group/link">
-                        View ledgers
-                        <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
-                      </Link>
-                    </div>
                   </motion.div>
               )}
 
@@ -291,18 +286,12 @@ export default function Finance() {
                         <span className="text-xs font-semibold tracking-wider text-gray-400 uppercase truncate max-w-[80px]" title={bank.full_name}>{bank.name}</span>
                       </div>
                     </div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-1 relative shrink truncate">{bank.label || 'Available Balance'}</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1 relative shrink truncate">{bank.full_name || bank.name || bank.label || 'Available Balance'}</h3>
                 <p className={cn("text-3xl font-black mb-2 relative", bank.balance < 0 ? "text-red-600" : "text-gray-900")}>
                   {loadingStatsLocal ? '...' : formatMoney(bank.balance || 0)}
                 </p>
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 font-medium relative mt-3 break-all">
                       <span className="truncate">{bank.account_number}</span>
-                    </div>
-                    <div className="flex justify-between items-center relative mt-4 pt-1 border-t border-gray-50">
-                      <Link to="/finance/table" className="text-xs font-semibold text-primary flex items-center gap-1 hover:text-primary/80 transition-colors group/link mt-2">
-                        View ledgers
-                        <ArrowRight size={14} className="group-hover/link:translate-x-1 transition-transform" />
-                      </Link>
                     </div>
                   </motion.div>
               ))}

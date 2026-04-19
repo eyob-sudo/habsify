@@ -163,7 +163,6 @@ export default function Tasks() {
       })
       return Array.isArray(data) ? data : []
     },
-    initialData: [],
     staleTime: 60 * 1000 // 1 minute
   })
 
@@ -227,7 +226,7 @@ export default function Tasks() {
     return () => document.removeEventListener('click', handleClick)
   }, [calendarOpen, priorityOpen, filterOpen, sortOpen])
 
-  const filteredTasks = useMemo(() => tasks, [tasks])
+  const filteredTasks = useMemo(() => tasks || [], [tasks])
 
   const calendarDays = useMemo(
     () => getCalendarDays(calendarYear, calendarMonth),
@@ -255,10 +254,10 @@ export default function Tasks() {
   }
 
   const handleToggle = (task) => {
-    const isNowCompleted = !task.completed
+    if (task.completed) return
     toggleTaskMutator.mutate({
       id: task.id,
-      payload: { completed: isNowCompleted }
+      payload: { completed: true }
     })
   }
 
@@ -423,6 +422,7 @@ export default function Tasks() {
                               onClick={(event) => {
                                 event.stopPropagation()
                                 setPriorityFilter(value)
+                                setFilterOpen(false)
                               }}
                               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                             >
@@ -441,6 +441,7 @@ export default function Tasks() {
                               onClick={(event) => {
                                 event.stopPropagation()
                                 setCompletedFilter(opt.value)
+                                setFilterOpen(false)
                               }}
                               className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded"
                             >
@@ -515,8 +516,9 @@ export default function Tasks() {
                         <input
                           type="checkbox"
                           checked={task.completed}
-                          onChange={() => handleToggle(task.id)}
-                          className="w-5 h-5 text-primary bg-white border-2 border-gray-300 rounded focus:ring-primary focus:ring-2 cursor-pointer"
+                          disabled={task.completed}
+                          onChange={() => handleToggle(task)}
+                          className={cn("w-5 h-5 text-primary bg-white border-2 border-gray-300 rounded focus:ring-primary focus:ring-2", task.completed ? "cursor-not-allowed opacity-50" : "cursor-pointer")}
                         />
                       </div>
                       <div className="flex-1">

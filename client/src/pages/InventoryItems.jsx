@@ -160,11 +160,12 @@ export default function InventoryItems() {
       })
       return { previous }
     },
-    onSuccess: () => {
-      toast.success(`Item ${editingItem ? 'updated' : 'created'} successfully`)
-      queryClient.invalidateQueries({ queryKey: ['inventoryItems'] })
-      closeModal()
-    },
+onSuccess: () => {
+  toast.success(`Item ${editingItem ? 'updated' : 'created'} successfully`)
+  queryClient.invalidateQueries({ queryKey: ['inventoryItems'] })
+  queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+  closeModal()
+},
     onError: (err, newItem, context) => {
       if (context?.previous) {
         queryClient.setQueryData(['inventoryItems', page, debouncedSearch, ordering, categoryFilter], context.previous)

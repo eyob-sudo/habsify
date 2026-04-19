@@ -104,11 +104,12 @@ export default function InventoryCategories() {
       })
       return { previous }
     },
-    onSuccess: () => {
-      toast.success(`Category ${editingCategory ? 'updated' : 'created'} successfully`)
-      queryClient.invalidateQueries({ queryKey: ['inventoryCategories'] })
-      closeModal()
-    },
+  onSuccess: () => {
+    toast.success(`Category ${editingCategory ? 'updated' : 'created'} successfully`)
+    queryClient.invalidateQueries({ queryKey: ['inventoryCategories'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+    closeModal()
+  },
     onError: (err, newCategory, context) => {
       if (context?.previous) {
         queryClient.setQueryData(['inventoryCategories', page, debouncedSearch, ordering], context.previous)

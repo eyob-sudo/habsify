@@ -115,11 +115,12 @@ export default function Suppliers() {
       if (editingSupplier) return updateSupplier(editingSupplier.id, payload)
       return createSupplier(payload)
     },
-    onSuccess: () => {
-      toast.success(`Supplier ${editingSupplier ? 'updated' : 'added'} successfully`)
-      queryClient.invalidateQueries({ queryKey: ['suppliers'] })
-      handleCloseModal()
-    },
+  onSuccess: () => {
+    toast.success(`Supplier ${editingSupplier ? 'updated' : 'added'} successfully`)
+    queryClient.invalidateQueries({ queryKey: ['suppliers'] })
+    queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
+    handleCloseModal()
+  },
     onError: () => toast.error('Check your form fields or network connection')
   })
 

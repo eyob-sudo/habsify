@@ -12,13 +12,13 @@ import { X, Camera, Mail, Phone, MapPin, KeyRound, ShieldCheck } from 'lucide-re
 const profileSchema = z.object({
   user_first_name: z.string().min(1, 'First name is required'),
   user_last_name: z.string().min(1, 'Last name is required'),
-  user_email: z.string().email('Invalid email address'),
-  phone_number: z.string().optional(),
-  street_address: z.string().optional(),
-  city: z.string().optional(),
-  state: z.string().optional(),
-  zip_code: z.string().optional(),
-  country: z.string().optional()
+  user_email: z.string().email('Invalid email address').nullish().or(z.literal('')),
+  phone_number: z.string().nullish().or(z.literal('')),
+  street_address: z.string().nullish().or(z.literal('')),
+  city: z.string().nullish().or(z.literal('')),
+  state: z.string().nullish().or(z.literal('')),
+  zip_code: z.string().nullish().or(z.literal('')),
+  country: z.string().nullish().or(z.literal(''))
 })
 
 const passwordSchema = z.object({
@@ -96,7 +96,10 @@ export default function ProfileModal({ open, onClose }) {
   // Mutator for Profile Details
   const saveProfileMutator = useMutation({
     mutationFn: async (payload) => {
-      const fullPayload = { ...profileQuery, ...payload, avatarFile }
+      // Create a clean payload to allow partial updates, excluding readonly fields backend rejects.
+      const cleanPayload = { ...payload }
+      delete cleanPayload.user_email // do not send email
+      const fullPayload = { ...cleanPayload, avatarFile }
       return updateProfile(fullPayload)
     },
     onSuccess: (updated) => {
@@ -266,7 +269,7 @@ export default function ProfileModal({ open, onClose }) {
                               <input
                                 {...registerProfile('user_email')}
                                 className={`w-full px-3 py-2 border rounded-lg bg-gray-50 text-gray-500 cursor-not-allowed text-sm ${profileErrors.user_email ? 'border-red-500' : 'border-gray-300'}`}
-                                disabled // Usually Emails represent identity strings, best not to mutate blindly
+                                readOnly // Prevents react-hook-form from dropping standard validation while preventing user edit
                               />
                             </div>
                             <div>
@@ -317,9 +320,8 @@ export default function ProfileModal({ open, onClose }) {
 
                         <div className="border-t border-gray-100 pt-6 flex justify-end gap-3 flex-row-reverse border-b pb-6">
                             <button
-                              type="button"
+                              type="submit"
                               disabled={saveProfileMutator.isPending}
-                              onClick={handleProfileSubmit(onProfileSave)}
                               className="px-6 py-2.5 !rounded-button whitespace-nowrap bg-primary font-medium text-white shadow-sm hover:bg-primary/90 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[140px]"
                             >
                               {saveProfileMutator.isPending ? (

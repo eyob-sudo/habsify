@@ -55,9 +55,11 @@ class Subscription(models.Model):
 
     @property
     def members_usage(self):
-        user_count = self.company.customers.count() + self.company.suppliers.count()
-        limit = self.plan.user_limit
-        return f"{user_count} / {limit} members"
+        return self.company.customers.count() + self.company.suppliers.count()
+    
+    @property
+    def members_remaining(self):
+        return self.plan.user_limit - self.members_usage
 
     def __str__(self):
         return f"{self.company.name} - {self.plan.name}"

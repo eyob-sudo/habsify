@@ -6,4 +6,4 @@ class CompanyPlanSerializer(serializers.Serializer):
     max_members = serializers.IntegerField()
     members_used = serializers.IntegerField()
     remaining_members = serializers.IntegerField()
-    trial_days_left = serializers.IntegerField()
+    days_remaining = serializers.IntegerField()

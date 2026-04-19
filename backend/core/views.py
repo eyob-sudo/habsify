@@ -9,15 +9,37 @@ class CompanyPlanView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        company = Company.objects.get(owner=request.user)
-
-        data = {
-            "plan_name": company.plan.name if company.plan else "No Plan",
-            "max_members": company.plan.max_members if company.plan else 0,
-            "members_used": company.members_used,
-            "remaining_members": company.remaining_members(),
-            "trial_days_left": company.trial_days_left(),
+        default_data = {
+            "plan_name": "No Plan",
+            "max_members": 0,
+            "members_used": 0,
+            "remaining_members": 0,
+            "days_remaining": 0,
         }
+
+        try:
+            company = Company.objects.filter(owner=request.user).first()
+
+            if not company:
+                raise AttributeError("No company found")
+
+            subscription = getattr(company, 'subscription', None)
+
+            if not subscription:
+                data = default_data
+            else:
+                plan = getattr(subscription, 'plan', None)
+
+                data = {
+                    "plan_name": plan.name if plan else "No Plan",
+                    "max_members": plan.user_limit if plan else 0,
+                    "members_used": getattr(subscription, 'members_usage', 0),
+                    "remaining_members": getattr(subscription, 'members_remaining', 0),
+                    "days_remaining": getattr(subscription, 'days_remaining', 0),
+                }
+
+        except Exception: 
+            data = default_data
 
         serializer = CompanyPlanSerializer(data)
         return Response(serializer.data)

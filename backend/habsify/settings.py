@@ -99,7 +99,7 @@ DATABASES = {
         default=os.environ.get("DATABASE_URL"),
         conn_max_age=600,        
         conn_health_checks=True,
-        ssl_require=True,         
+        ssl_require=False,         
     )
 }
 

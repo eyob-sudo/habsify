@@ -128,7 +128,7 @@ export default function Inventory() {
     toast.success(`Warehouse ${editingWarehouse ? 'updated' : 'added'} successfully`)
     queryClient.invalidateQueries({ queryKey: ['warehouses'] })
     queryClient.invalidateQueries({ queryKey: ['dashboardData'] })
-    handleCloseModal()
+    closeModal()
   },
     onError: (err, newWarehouse, context) => {
       if (context?.previous) {

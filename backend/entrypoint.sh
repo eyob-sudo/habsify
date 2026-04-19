@@ -17,11 +17,11 @@ if [ -n "${PORT}" ] && echo "$@" | grep -q "gunicorn"; then
   eval "set -- $new_args"
 fi
 
-# Run migrations for web OR worker
-if echo "$@" | grep -q -E "gunicorn|celery"; then
+if echo "$@" | grep -q -E "gunicorn|runserver"; then
     echo "→ Running migrations..."
     uv run python manage.py migrate --noinput
 fi
+
 
 # Create superuser silently if it doesn't exist
 if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then

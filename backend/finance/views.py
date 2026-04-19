@@ -1,6 +1,6 @@
 from django.db.models import Sum,Q
 from rest_framework import viewsets,generics, status
-from datetime import datetime
+from datetime import datetime,timedelta
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.decorators import api_view,permission_classes
@@ -49,7 +49,14 @@ class TransactionViewSet(viewsets.ModelViewSet):
 @permission_classes([HasActiveSubscription, IsAuthenticated])
 def finance_stats(request):
     if request.user.role != 'super_admin':
-        accounts = Account.objects.filter(company=request.user.company)
+        company = request.user.company
+        company_filter = Q(company=company)
+    else:
+        company_filter = Q()  
+
+
+    if request.user.role != 'super_admin':
+        accounts = Account.objects.filter(company=company)
     else:
         accounts = Account.objects.all()
 
@@ -60,31 +67,34 @@ def finance_stats(request):
             Q(full_name__icontains=search)
         )
 
-    # Current month and last month for Total Expenses + % change
-    today = datetime.today()
+    today = datetime.today().date()                   
     current_month_start = today.replace(day=1)
-    current_month_end = current_month_start + relativedelta(months=1, days=-1)
+    current_month_end = (current_month_start + relativedelta(months=1)) - timedelta(days=1)
 
-    last_month_start = current_month_start + relativedelta(months=-1)
-    last_month_end = current_month_start + relativedelta(days=-1)
+    last_month_start = current_month_start - relativedelta(months=1)
+    last_month_end = current_month_start - timedelta(days=1)
 
-    # Total Expenses this month
+
     total_expenses_current = Transaction.objects.filter(
+        company_filter,                    # ← this is the fix
         type='outflow',
-        date__range=[current_month_start, current_month_end]
+        date__date__range=[current_month_start, current_month_end]   # safer with DateTimeField
     ).aggregate(Sum('amount'))['amount__sum'] or 0
 
     total_expenses_last = Transaction.objects.filter(
+        company_filter,
         type='outflow',
-        date__range=[last_month_start, last_month_end]
+        date__date__range=[last_month_start, last_month_end]
     ).aggregate(Sum('amount'))['amount__sum'] or 0
 
-    expenses_change = ((total_expenses_current - total_expenses_last) / total_expenses_last * 100) if total_expenses_last else 0
+    expenses_change = (
+        ((total_expenses_current - total_expenses_last) / total_expenses_last * 100)
+        if total_expenses_last else 0
+    )
 
-    # Cash on Hand
+    # Cash on Hand & Banks (unchanged)
     cash_on_hand = accounts.filter(account_type='cash').aggregate(Sum('balance'))['balance__sum'] or 0
 
-    # Bank accounts list
     banks = accounts.filter(account_type='bank')
     banks_formatted = [
         {
@@ -96,7 +106,6 @@ def finance_stats(request):
         } for bank in banks
     ]
 
-    # Final response - exactly as you requested
     return Response({
         "total_expenses": {
             "amount": total_expenses_current,

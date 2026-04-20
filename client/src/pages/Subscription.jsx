@@ -209,7 +209,7 @@ export default function Subscription() {
     try {
       await subscribeAndPay({
         plan_id: payPlan.id,
-        payment_method: payForm.payment_method,
+        payment_method: Number(payForm.payment_method),
         bank_account: Number(payForm.bank_account),
         transaction_id: payForm.transaction_id.trim()
       })
@@ -471,7 +471,7 @@ export default function Subscription() {
                     >
                       <option value="">Select payment method</option>
                       {paymentMethods.map((method) => (
-                        <option key={method.id} value={method.code}>{method.label}</option>
+                        <option key={method.id} value={method.id}>{method.label}</option>
                       ))}
                     </select>
                   </div>

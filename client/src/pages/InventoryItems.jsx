@@ -95,12 +95,12 @@ export default function InventoryItems() {
   // PHASE 38: Optimize backend data fetching with React Query
   // Category Metada Cache
   const { data: categoriesRaw } = useQuery({
-    queryKey: ['inventoryCategoriesCache'],
+    queryKey: ['inventoryCategories', 'dropdown'],
     queryFn: async () => {
       const res = await getCategories({ page: 1 })
       return Array.isArray(res?.data) ? res.data : (res?.data?.results || res || [])
     },
-    staleTime: 5 * 60 * 1000 // Cache categories for 5 mins
+    staleTime: 60 * 1000 // Cache categories for 1 min (invalidates automatically when new categories are created)
   })
 
   const categories = Array.isArray(categoriesRaw) ? categoriesRaw : []

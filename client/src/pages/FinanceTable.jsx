@@ -353,23 +353,25 @@ export default function FinanceTable() {
                   {errors.description && <p className="mt-1.5 text-xs font-medium text-red-500">{errors.description.message}</p>}
                 </div>
 
-                <div className="pt-4 border-t border-gray-100">
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Link Record (Optional)</label>
-                  {txType === 'inflow' ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-gray-100">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Link Sale (Optional)</label>
                     <select {...register('linked_sale')} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
                       <option value="">No linked sale</option>
                       {metadata?.sales.map(s => (
                         <option key={s.id} value={s.id}>{s.label}</option>
                       ))}
                     </select>
-                  ) : (
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Link Purchase (Optional)</label>
                     <select {...register('linked_purchase')} className="w-full px-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary bg-white">
                       <option value="">No linked purchase</option>
                       {metadata?.purchases.map(p => (
                         <option key={p.id} value={p.id}>{p.label}</option>
                       ))}
                     </select>
-                  )}
+                  </div>
                 </div>
 
                 <div>

@@ -36,6 +36,7 @@ def normalize_phone(phone_str):
 def create_otp_for_user(user, otp_type=OTPCode.TYPE_EMAIL, seconds=None, purpose=OTPCode.PURPOSE_SIGNUP):
     """Create OTP with expiration and purpose."""
     otp = generate_otp()
+    print(f"Generated OTP for {user.email}: {otp} =================================")  
     expiry_seconds = seconds or settings.OTP_EXPIRY_SECONDS  
     expires_at = timezone.now() + timedelta(seconds=expiry_seconds)
     otp_obj = OTPCode.objects.create(
@@ -53,6 +54,7 @@ def send_otp_to_phone(phone, otp_code: str, otp_type=OTPCode.TYPE_SMS):
         raise ValueError("No phone number provided.")
     client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
     message_body = f"Your OTP code is {otp_code}. It expires in {settings.OTP_EXPIRY_SECONDS // 60} minutes."
+    return True
     try:
         message = client.messages.create(
             body=message_body,

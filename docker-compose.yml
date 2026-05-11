@@ -1,12 +1,9 @@
 services:
   backend:
     build: ./backend
-    container_name: habsify_dev
-    command: >
-      sh -c "
-      sleep 5 &&
-      uv run python manage.py runserver 0.0.0.0:8000
-      "
+    container_name: habsify_prod
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: ["uv", "run", "gunicorn", "habsify.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "4", "--timeout", "120"]
     volumes:
       - ./backend:/app
     ports:
@@ -16,8 +13,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    restart: on-failure
-    
+    restart: unless-stopped
+
   db:
     image: postgres:16
     container_name: habsify_db
@@ -34,35 +31,30 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: on-failure
+    restart: unless-stopped
+
   redis:
-    image: redis:6.2-alpine
+    image: redis:7-alpine
     ports:
       - "6379:6379"
-    restart: always
     volumes:
       - redis_data:/data
+    restart: unless-stopped
 
   celery_worker:
     build: ./backend
-    command: ["uv", "run", "celery", "-A", "habsify", "worker", "-l", "info"]
+    entrypoint: ["/app/docker/entrypoint.sh"]
+    command: ["uv", "run", "celery", "-A", "habsify", "worker", "-l", "info", "--concurrency=4"]
     volumes:
       - ./backend:/app
     env_file:
       - .env
     depends_on:
-      - db
-      - redis
-
-  celery_beat:
-    build: ./backend
-    command: ["uv", "run", "celery", "-A", "habsify", "beat", "-l", "info"]
-    volumes: 
-      - ./backend:/app
-    env_file:
-      - .env
-    depends_on:
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
 
 volumes:
   pgdata:

@@ -3,31 +3,47 @@ set -e
 
 echo "🚀 Starting habsify backend..."
 
-# Render.com dynamic port support
-if [ -n "${PORT}" ] && echo "$@" | grep -q "gunicorn"; then
-  echo "→ Detected Render PORT=${PORT}, updating gunicorn bind address..."
-  new_args=""
-  for arg in "$@"; do
-    if [ "$arg" = "0.0.0.0:8000" ]; then
-      new_args="$new_args 0.0.0.0:${PORT}"
-    else
-      new_args="$new_args $arg"
-    fi
-  done
-  eval "set -- $new_args"
-fi
+# ======================
+# Wait for Database
+# ======================
+echo "→ Waiting for database..."
+while ! uv run python -c "
+import os, time
+from django.db import connection
+from django.db.utils import OperationalError
+try:
+    connection.ensure_connection()
+    print('✅ Database is ready!')
+except OperationalError:
+    print('⏳ Database not ready yet...')
+    exit(1)
+" 2>/dev/null; do
+  echo "Waiting for database... (5s)"
+  sleep 5
+done
 
-if echo "$@" | grep -q -E "gunicorn|runserver"; then
-    echo "→ Running migrations..."
-    uv run python manage.py migrate --noinput
-fi
+# ======================
+# Run Migrations
+# ======================
+echo "→ Running migrations..."
+uv run python manage.py migrate --noinput
 
+# ======================
+# Collect Static Files
+# ======================
+echo "→ Collecting static files..."
+uv run python manage.py collectstatic --noinput
 
-# Create superuser silently if it doesn't exist
-if [ -n "$DJANGO_SUPERUSER_USERNAME" ]; then
+# ======================
+# Create Superuser (optional)
+# ======================
+if [ -n "$DJANGO_SUPERUSER_USERNAME" ] && [ -n "$DJANGO_SUPERUSER_EMAIL" ] && [ -n "$DJANGO_SUPERUSER_PASSWORD" ]; then
   echo "→ Creating superuser (if not exists)..."
   uv run python manage.py createsuperuser --noinput 2>/dev/null || true
 fi
 
-echo "→ Starting: $@"
+# ======================
+# Start Application
+# ======================
+echo "→ Starting: $*"
 exec "$@"

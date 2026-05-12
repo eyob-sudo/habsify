@@ -7,10 +7,11 @@ For more information on this file, see
 https://docs.djangoproject.com/en/6.0/howto/deployment/asgi/
 """
 
+"""
+ASGI config for habsify project.
+"""
 import os
-
 from django.core.asgi import get_asgi_application
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'habsify.settings')
-
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "habsify.settings.dev")
 application = get_asgi_application()

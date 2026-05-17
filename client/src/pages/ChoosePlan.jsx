@@ -19,20 +19,33 @@ export default function ChoosePlan() {
   const [payForm, setPayForm] = useState({ payment_method: '', bank_account: '', transaction_id: '' })
 
   useEffect(() => {
-    Promise.all([
-      getSubscriptionPlans(),
-      getPaymentMethods().catch(() => []),
-      getBankAccounts().catch(() => [])
-    ]).then(([plansData, pmData, bankData]) => {
-      setPlans(Array.isArray(plansData) ? plansData : [])
-      setPaymentMethods(Array.isArray(pmData) ? pmData : [])
-      setBankAccounts(Array.isArray(bankData) ? bankData : [])
-      setLoading(false)
-    }).catch(() => {
-      toast.error('Failed to load plans')
-      setLoading(false)
-    })
+    getSubscriptionPlans()
+      .then(plansData => {
+        setPlans(Array.isArray(plansData) ? plansData : [])
+        setLoading(false)
+      })
+      .catch(() => {
+        toast.error('Failed to load plans')
+        setLoading(false)
+      })
   }, [])
+
+  // Only load dropdowns when modal is opened, preventing unnecessary aggressive requests
+  useEffect(() => {
+    let alive = true
+    if (payModalOpen) {
+      Promise.all([
+        getPaymentMethods().catch(() => []),
+        getBankAccounts().catch(() => [])
+      ]).then(([pmData, bankData]) => {
+        if (alive) {
+          setPaymentMethods(Array.isArray(pmData) ? pmData : [])
+          setBankAccounts(Array.isArray(bankData) ? bankData : [])
+        }
+      })
+    }
+    return () => { alive = false }
+  }, [payModalOpen])
 
   const handleStartTrial = async (planId) => {
     setProcessing(planId)

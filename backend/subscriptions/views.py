@@ -32,28 +32,27 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
 
     def list(self, request, *args, **kwargs):
         company_id = request.user.company.id if request.user.is_authenticated else "public"
-        
         cache_key = f"subscription_plans_{company_id}"
 
+        data = cache.get(cache_key)
 
         if data is None:
-            # First time or cache expired
             plans = list(self.get_queryset())
+            all_features = list(Feature.objects.all().order_by("id"))
 
-            all_features = list(Feature.objects.all().order_by('id'))  # added order_by for consistency
-
-            plan_features_map = {}
-            for plan in plans:
-                plan_features_map[plan.id] = {f.id for f in plan.features.all()}
+            plan_features_map = {
+                plan.id: {f.id for f in plan.features.all()}
+                for plan in plans
+            }
 
             serializer = self.get_serializer(
-                plans, 
-                many=True, 
+                plans,
+                many=True,
                 context={
-                    'request': request,
-                    'all_features': all_features,
-                    'plan_features_map': plan_features_map
-                }
+                    "request": request,
+                    "all_features": all_features,
+                    "plan_features_map": plan_features_map,
+                },
             )
             data = serializer.data
 

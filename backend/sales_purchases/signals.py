@@ -1,38 +1,95 @@
+import logging
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from django.db import transaction as db_transaction
-from django.core.exceptions import ObjectDoesNotExist
-from finance.models import Transaction
-from .models import Sale, Purchase  
-
-import logging
+from django.core.exceptions import ValidationError
+from inventory.models import StockMovement, Inventory
+from django.db import transaction
+from sales_purchases.models import Purchase, Sale
+from notifications.models import Notification
 
 logger = logging.getLogger(__name__)
+
+
+@receiver(post_save, sender=Sale, dispatch_uid="create_stock_movement_for_sale")
+def create_stock_movement_for_sale(sender, instance, created, **kwargs):
+    if not created:
+        return
+    if not instance.item or not instance.warehouse:
+        return
+
+    try:
+        inventory = Inventory.objects.get(
+            item=instance.item,
+            warehouse=instance.warehouse
+        )
+    except Inventory.DoesNotExist:
+        raise ValueError(f"No inventory found for {instance.item} in {instance.warehouse}")
+
+    if inventory.current_stock < instance.quantity:
+        raise ValidationError(f"Not enough stock in {inventory.warehouse.name}")
+
+    if StockMovement.objects.filter(sale=instance, inventory=inventory).exists():
+        return
+
+    with transaction.atomic():
+        StockMovement.objects.create(
+            inventory=inventory,
+            movement_type="sale",
+            quantity=-instance.quantity,
+            sale=instance,
+            notes=instance.notes or "Auto-generated from sale"
+        )
+
+
+@receiver(post_save, sender=Purchase, dispatch_uid="create_stock_movement_for_purchase")
+def create_stock_movement_for_purchase(sender, instance, created, **kwargs):
+    if not created:
+        return
+    if not instance.item or not instance.warehouse:
+        return
+
+    inventory, _ = Inventory.objects.get_or_create(
+        company=instance.company,
+        item=instance.item,
+        warehouse=instance.warehouse,
+        defaults={"current_stock": 0, "low_stock_threshold": 5}
+    )
+
+    if StockMovement.objects.filter(purchase=instance, inventory=inventory).exists():
+        return
+
+    with transaction.atomic():
+        StockMovement.objects.create(
+            inventory=inventory,
+            movement_type="purchase",
+            quantity=instance.quantity,
+            purchase=instance,
+            notes=instance.notes or "Auto-generated from purchase"
+        )
+
 
 @receiver(post_save, sender=Sale, dispatch_uid='handle_sale_payment_unique')
 def handle_sale_payment(sender, instance, created, **kwargs):
     if not created:
         return
-
     if instance.status != 'paid' or not instance.account:
         return
 
     reference = f"SALE-{instance.id}"
-    if Transaction.objects.filter(reference=reference).exists():
+
+    from finance.models import Transaction as FinanceTransaction
+    if FinanceTransaction.objects.filter(reference=reference).exists():
         logger.warning(f"Transaction already exists for {reference}, skipping creation")
         return
 
-    try:
-        if instance.transactions.exists():
-            return
-    except ObjectDoesNotExist:
-        pass
+    if instance.transactions.exists():
+        return
 
-    with db_transaction.atomic():
-        trans = Transaction.objects.create(
+    with transaction.atomic():
+        FinanceTransaction.objects.create(
             company=instance.company,
             account=instance.account,
-            type='inflow',
+            type='revenue', 
             amount=instance.total,
             description=f"Sale to {instance.customer.name if instance.customer else 'Customer'}",
             reference=reference,
@@ -41,30 +98,29 @@ def handle_sale_payment(sender, instance, created, **kwargs):
         )
         instance.update_status()
 
+
 @receiver(post_save, sender=Purchase, dispatch_uid='handle_purchase_payment_unique')
 def handle_purchase_payment(sender, instance, created, **kwargs):
     if not created:
         return
-
     if instance.status != 'paid' or not instance.account:
         return
 
     reference = f"PURCHASE-{instance.id}"
-    if Transaction.objects.filter(reference=reference).exists():
+
+    from finance.models import Transaction as FinanceTransaction
+    if FinanceTransaction.objects.filter(reference=reference).exists():
         logger.warning(f"Transaction already exists for {reference}, skipping creation")
         return
 
-    try:
-        if instance.transactions.exists():
-            return
-    except ObjectDoesNotExist:
-        pass
+    if instance.transactions.exists():
+        return
 
-    with db_transaction.atomic():
-        trans = Transaction.objects.create(
+    with transaction.atomic():
+        FinanceTransaction.objects.create(
             company=instance.company,
             account=instance.account,
-            type='outflow',
+            type='cogs', 
             amount=instance.total,
             description=f"Purchase from {instance.supplier.name if instance.supplier else 'Supplier'}",
             reference=reference,
@@ -72,3 +128,23 @@ def handle_purchase_payment(sender, instance, created, **kwargs):
             linked_purchase=instance
         )
         instance.update_status()
+
+
+@receiver(post_save, sender=StockMovement)
+def trigger_low_stock_notification(sender, instance, created, **kwargs):
+    if created:
+        inventory = instance.inventory
+        if instance.movement_type in ['sale', 'transfer_out'] or (
+            instance.movement_type == 'adjustment' and instance.quantity < 0
+        ):
+            if inventory.is_low_stock:
+                Notification.objects.create(
+                    company=inventory.company,
+                    user=inventory.company.owner,
+                    type='low_stock',
+                    message=(
+                        f"{inventory.item.name} stock low in "
+                        f"{inventory.warehouse.name}: {inventory.current_stock} left "
+                        f"(threshold {inventory.low_stock_threshold})"
+                    )
+                )

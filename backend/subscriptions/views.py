@@ -4,10 +4,10 @@ from rest_framework.views import APIView
 from rest_framework import viewsets,mixins,generics
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework.decorators import action
+from django.core.cache import cache
 from django.views.decorators.cache import cache_page
 from django.utils.decorators import method_decorator
 from rest_framework import status
-from django.core.cache import cache
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.utils.decorators import method_decorator
@@ -31,10 +31,10 @@ class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
 
     def list(self, request, *args, **kwargs):
-        cache_key = "subscription_plans_public"
+        company_id = request.user.company.id if request.user.is_authenticated else "public"
+        
+        cache_key = f"subscription_plans_{company_id}"
 
-        # Try cache first
-        data = cache.get(cache_key)
 
         if data is None:
             # First time or cache expired

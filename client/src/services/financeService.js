@@ -20,5 +20,4 @@ export const updateAccount = (id, payload) => api.put(`/finance/accounts/${id}/`
 export const createFinanceTransaction = (payload) => api.post('/finance/transactions/', payload);
 export const getSaleDropdown = () => api.get('/sales-purchases/sale-dropdown/');
 export const getPurchaseDropdown = () => api.get('/sales-purchases/purchase-dropdown/');
-// Future: Add more finance endpoints
-// export const createTransaction = (payload) => api.post('/finance/transactions/', payload);
+export const getTransactionTypes = () => api.get('/finance/transaction-types/');

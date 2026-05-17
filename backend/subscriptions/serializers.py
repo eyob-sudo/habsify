@@ -105,6 +105,7 @@ class FreeTrialSerializer(serializers.Serializer):
 
             company.has_used_trial = True
             company.save(update_fields=['has_used_trial'])  
+            company.refresh_from_db() 
 
         return subscription
     

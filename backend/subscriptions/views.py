@@ -138,7 +138,10 @@ class AccessStatusView(APIView):
     def get(self, request):
         user = request.user
         company = user.company
-        subscription = getattr(company, "subscription", None)
+        
+        subscription = Subscription.objects.filter(
+            company=company
+        ).select_related('plan').first()
 
         if not subscription:
             data = {
@@ -150,7 +153,6 @@ class AccessStatusView(APIView):
                 "action_required": "CHOOSE_PLAN",
             }
         else:
-            # Active/trialing are full access
             is_active = subscription.status in {
                 Subscription.STATUS_ACTIVE,
                 Subscription.STATUS_TRIALING,
@@ -167,3 +169,4 @@ class AccessStatusView(APIView):
             }
 
         return Response(AccessStatusSerializer(data).data)
+

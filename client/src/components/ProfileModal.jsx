@@ -6,7 +6,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import * as z from 'zod'
-import { X, Camera, Mail, Phone, MapPin, KeyRound, ShieldCheck } from 'lucide-react'
+import { X, Camera, Mail, Phone, MapPin, KeyRound, ShieldCheck, AlertTriangle } from 'lucide-react'
+import api from '../services/api'
 
 // PHASE 14: Strict Zod validation schemas for professional Profile forms
 const profileSchema = z.object({
@@ -54,6 +55,8 @@ export default function ProfileModal({ open, onClose }) {
   const [avatarFile, setAvatarFile] = useState(null)
   const [avatarPreview, setAvatarPreview] = useState('')
   const [passwordOpen, setPasswordOpen] = useState(false)
+  const [resetOpen, setResetOpen] = useState(false)
+  const [confirmReset, setConfirmReset] = useState(false)
 
   // PHASE 15: Automating fetched Server State inside React Query
   const { data: profileQuery, isLoading: loading } = useQuery({
@@ -122,12 +125,29 @@ export default function ProfileModal({ open, onClose }) {
     }
   })
 
+  // Mutator for Reset Company Data
+  const resetMutator = useMutation({
+    mutationFn: async () => {
+      const res = await api.post('/company/reset/', { confirm: true })
+      return res.data
+    },
+    onSuccess: (data) => {
+      toast.success(data.detail || 'Company data reset successfully')
+      setTimeout(() => window.location.reload(), 1500)
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.detail || 'Failed to reset company data')
+    }
+  })
+
   // Reset temporal states on open
   useEffect(() => {
     if (!open) {
       setAvatarFile(null)
       setAvatarPreview('')
       setPasswordOpen(false)
+      setResetOpen(false)
+      setConfirmReset(false)
       resetPasswordForm()
     }
   }, [open, resetPasswordForm])
@@ -401,6 +421,63 @@ export default function ProfileModal({ open, onClose }) {
                                 </div>
                               </div>
                             </motion.form>
+                          )}
+                        </AnimatePresence>
+                      </div>
+
+                      {/* Danger Zone */}
+                      <div className="pt-2 pb-6 border-t border-gray-100">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="text-lg font-semibold text-red-600 flex items-center gap-2">
+                             <AlertTriangle size={20} className="text-red-600" />
+                             Danger Zone
+                          </h4>
+                          <button
+                            type="button"
+                            onClick={() => { setResetOpen(v => !v); setConfirmReset(false); }}
+                            className="px-4 py-2 !rounded-button whitespace-nowrap border border-red-200 text-red-600 text-sm font-medium hover:bg-red-50 transition-colors shadow-sm"
+                          >
+                            {resetOpen ? 'Cancel' : 'Reset All Data'}
+                          </button>
+                        </div>
+
+                        <AnimatePresence>
+                          {resetOpen && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden space-y-4"
+                            >
+                              <div className="bg-red-50 p-5 rounded-xl border border-red-100">
+                                <h5 className="text-red-800 font-bold mb-2">Are you sure? This will delete ALL data permanently.</h5>
+                                <p className="text-sm text-red-600 mb-4">
+                                  This action cannot be undone. All financial transactions, accounts, sales, purchases, inventory data (items, categories, warehouses, movements), CRM customers, interactions, suppliers, tasks, and notifications will be permanently erased.
+                                </p>
+
+                                <label className="flex items-center gap-3 cursor-pointer mb-4">
+                                  <input
+                                    type="radio"
+                                    checked={confirmReset}
+                                    onClick={() => setConfirmReset(!confirmReset)}
+                                    onChange={() => {}}
+                                    className="w-4 h-4 text-red-600 focus:ring-red-500 border-red-300"
+                                  />
+                                  <span className="text-sm font-medium text-red-800">I confirm that I want to delete all company data.</span>
+                                </label>
+
+                                <div className="flex justify-end pt-2">
+                                  <button
+                                    type="button"
+                                    disabled={!confirmReset || resetMutator.isPending}
+                                    onClick={() => resetMutator.mutate()}
+                                    className="px-5 py-2 bg-red-600 text-white !rounded-button text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center min-w-[160px]"
+                                  >
+                                    {resetMutator.isPending ? 'Resetting...' : 'Permanently Delete Data'}
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
                           )}
                         </AnimatePresence>
                       </div>

@@ -102,13 +102,12 @@ class FreeTrialSerializer(serializers.Serializer):
                     'active': True,
                 }
             )
-            company.subscription = subscription
+
             company.has_used_trial = True
-            company.save(update_fields=['has_used_trial', 'subscription'])
+            company.save(update_fields=['has_used_trial'])  
 
         return subscription
-
-
+    
 class PayNowSerializer(serializers.Serializer):
     plan_id = serializers.IntegerField()
     payment_method = serializers.PrimaryKeyRelatedField(

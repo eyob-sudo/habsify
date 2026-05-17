@@ -2,7 +2,14 @@ from rest_framework.decorators import api_view,permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from crm.permissions import HasActiveSubscription
-from .utils import get_financial_overview, get_business_kpis, get_top_products, get_top_customers, get_top_suppliers, get_top_products_chart, get_customer_growth, get_recent_activity
+from .utils import (get_financial_overview, 
+                    get_business_kpis, 
+                    get_top_products, 
+                    get_top_customers, 
+                    get_top_suppliers, 
+                    get_top_products_chart, 
+                    get_customer_growth, 
+                    get_recent_activity)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])

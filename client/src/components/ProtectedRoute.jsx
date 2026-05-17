@@ -10,7 +10,7 @@ export default function ProtectedRoute() {
   const location = useLocation()
 
   const { data: access, isFetching: checkingAccess } = useQuery({
-    queryKey: ['accessStatus', location.pathname],
+    queryKey: ['accessStatus'],
     queryFn: async () => {
       const res = await api.get('/subscriptions/me/access-status/')
       setGlobalAccessStatus(res.data)

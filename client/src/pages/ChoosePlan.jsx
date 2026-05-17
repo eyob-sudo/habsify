@@ -4,6 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAuth } from '../context/AuthContext'
 import { getSubscriptionPlans, startFreeTrial, getPaymentMethods, getBankAccounts, subscribeAndPay } from '../services/subscriptionService'
 import toast from '../services/toastService'
+import api from '../services/api'  
 
 export default function ChoosePlan() {
   const { user } = useAuth()
@@ -49,23 +50,38 @@ export default function ChoosePlan() {
     return () => { alive = false }
   }, [payModalOpen])
 
-  const handleStartTrial = async (planId) => {
-    setProcessing(planId)
-    try {
-      await startFreeTrial(planId)
-      toast.success('Trial started successfully!')
-      window.location.href = '/dashboard'
-    } catch (err) {
-      if (err?.response?.status === 400 || err?.response?.data?.detail?.includes('already')) {
-        toast.success('Moving to dashboard...')
-        window.location.href = '/dashboard'
-      } else {
-        toast.error('Failed to start trial. Please try again.')
-      }
-    } finally {
-      setProcessing(null)
+const redirectToDashboard = async () => {
+  await queryClient.invalidateQueries({ queryKey: ['accessStatus'] })
+  navigate('/dashboard', { replace: true })
+}
+
+const handleStartTrial = async (planId) => {
+  setProcessing(planId)
+  try {
+    await startFreeTrial(planId)
+    toast.success('Trial started successfully!')
+    await redirectToDashboard()
+  } catch (err) {
+    const status = err?.response?.status
+    const detail = err?.response?.data?.detail || ''
+
+    // Only redirect if specifically "already used trial"
+    if (status === 400 && detail.toLowerCase().includes('already used')) {
+      toast.info('You already have an active subscription')
+      await redirectToDashboard()
+    } else if (status === 400) {
+      // Show actual error message from backend
+      toast.error(detail || 'Invalid request. Please try again.')
+    } else if (status === 401) {
+      toast.error('Session expired. Please log in again.')
+      navigate('/login', { replace: true })
+    } else {
+      toast.error('Failed to start trial. Please try again.')
     }
+  } finally {
+    setProcessing(null)
   }
+}
 
   const handleSubscribe = (plan) => {
     setPayPlan(plan)
@@ -88,9 +104,22 @@ export default function ChoosePlan() {
         bank_account: Number(payForm.bank_account),
         transaction_id: payForm.transaction_id.trim()
       })
-      toast.success('Subscription request sent')
-      setPayModalOpen(false)
-      await queryClient.refetchQueries({ queryKey: ['accessStatus'] })
+    toast.success('Subscription request sent! Awaiting approval.')
+    setPayModalOpen(false)
+    
+    await queryClient.invalidateQueries({ queryKey: ['accessStatus'] })
+
+    const updatedAccess = await queryClient.fetchQuery({ 
+      queryKey: ['accessStatus'],
+      queryFn: async () => {
+        const res = await api.get('/subscriptions/me/access-status/')
+        return res.data
+      }
+    })
+    
+    if (updatedAccess?.can_enter_app) {
+      navigate('/dashboard', { replace: true })
+    }
     } catch (err) {
       // global error handler covers toast
     } finally {

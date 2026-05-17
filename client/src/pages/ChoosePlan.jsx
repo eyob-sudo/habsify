@@ -90,7 +90,7 @@ export default function ChoosePlan() {
       })
       toast.success('Subscription request sent')
       setPayModalOpen(false)
-      window.location.href = '/dashboard'
+      await queryClient.refetchQueries({ queryKey: ['accessStatus'] })
     } catch (err) {
       // global error handler covers toast
     } finally {

@@ -51,15 +51,23 @@ export default function ChoosePlan() {
   }, [payModalOpen])
 
 const redirectToDashboard = async () => {
-  await queryClient.fetchQuery({ 
-    queryKey: ['accessStatus'],
-    queryFn: async () => {
-      const res = await api.get('/subscriptions/me/access-status/')
-      return res.data
-    }
-  })
-  
-  navigate('/dashboard', { replace: true })
+  try {
+    await queryClient.fetchQuery({ 
+      queryKey: ['accessStatus'],
+      queryFn: async () => {
+        const res = await api.get('/subscriptions/me/access-status/')
+        setGlobalAccessStatus(res.data)   
+        return res.data
+      }
+    })
+
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    navigate('/dashboard', { replace: true })
+  } catch (err) {
+    console.error("Failed to fetch access status:", err)
+    navigate('/dashboard', { replace: true })
+  }
 }
 
 const handleStartTrial = async (planId) => {
@@ -72,12 +80,10 @@ const handleStartTrial = async (planId) => {
     const status = err?.response?.status
     const detail = err?.response?.data?.detail || ''
 
-    // Only redirect if specifically "already used trial"
-    if (status === 400 && detail.toLowerCase().includes('already used')) {
+    if (status === 400 && detail.toLowerCase().includes('already')) {
       toast.info('You already have an active subscription')
       await redirectToDashboard()
     } else if (status === 400) {
-      // Show actual error message from backend
       toast.error(detail || 'Invalid request. Please try again.')
     } else if (status === 401) {
       toast.error('Session expired. Please log in again.')

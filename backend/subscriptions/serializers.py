@@ -12,14 +12,17 @@ class FeatureSerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'code', 'description', 'is_included']
 
     def get_is_included(self, obj):
-        plan = self.context.get('plan') 
-        if plan:
-            return obj in plan.features.all()
-        return False
-    
+        included_feature_ids = self.context.get('included_feature_ids', set())
+        return obj.id in included_feature_ids
+
+
 class SubscriptionPlanSerializer(serializers.ModelSerializer):
     features = serializers.SerializerMethodField()
     has_used_trial = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SubscriptionPlan
+        fields = ['id', 'name', 'price_monthly', 'user_limit', 'trial_days', 'has_used_trial', 'features']
 
     def get_has_used_trial(self, obj):
         request = self.context.get('request')
@@ -27,13 +30,16 @@ class SubscriptionPlanSerializer(serializers.ModelSerializer):
             return request.user.company.has_used_trial
         return False
 
-    class Meta:
-        model = SubscriptionPlan
-        fields = ['id', 'name', 'price_monthly', 'user_limit', 'trial_days','has_used_trial', 'features']
-
     def get_features(self, obj):
-        all_features = Feature.objects.all()
-        return FeatureSerializer(all_features, many=True, context={'plan': obj}).data
+        all_features = self.context.get('all_features', [])
+        included_ids = self.context.get('plan_features_map', {}).get(obj.id, set())
+
+        serializer = FeatureSerializer(
+            all_features, 
+            many=True, 
+            context={'included_feature_ids': included_ids}
+        )
+        return serializer.data
 
 class SubscriptionSerializer(serializers.ModelSerializer):
     plan = SubscriptionPlanSerializer(read_only=True)

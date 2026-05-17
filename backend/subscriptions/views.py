@@ -1,13 +1,14 @@
 from django.utils import timezone
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework import viewsets,mixins
+from rest_framework import viewsets,mixins,generics
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework import status
+from django.core.cache import cache
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import SubscriptionPlan,Subscription,Payment,PaymentMethod,BankAccount
+from .models import Feature, SubscriptionPlan,Subscription,Payment,PaymentMethod,BankAccount
 from crm.permissions import HasActiveSubscription 
 from .permissions import IsOwnerOrAdmin,HasValidSubscription
 from .throttles import SubscriptionGlobalThrottle,SubscribeAndPayThrottle
@@ -19,10 +20,40 @@ from .serializers import (SubscriptionPlanSerializer,
                           BankAccountSerializer,
                           AccessStatusSerializer)
 
-class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = SubscriptionPlan.objects.filter(is_active=True)
+
+class SubscriptionPlanView(generics.ListAPIView):
     serializer_class = SubscriptionPlanSerializer
-    permission_classes = [IsAuthenticated]
+
+    def list(self, request, *args, **kwargs):
+        cache_key = f"subscription_plans_{request.user.id if request.user.is_authenticated else 'anon'}"
+        
+        data = cache.get(cache_key)
+        
+        if data is None:
+            queryset = SubscriptionPlan.objects.prefetch_related('features')
+            plans = list(queryset)
+
+            all_features = list(Feature.objects.all())
+
+            plan_features_map = {}
+            for plan in plans:
+                plan_features_map[plan.id] = {f.id for f in plan.features.all()}
+
+            serializer = self.get_serializer(
+                plans, 
+                many=True, 
+                context={
+                    'request': request,
+                    'all_features': all_features,
+                    'plan_features_map': plan_features_map
+                }
+            )
+            data = serializer.data
+            
+            # Cache for 10 minutes
+            cache.set(cache_key, data, timeout=60 * 10)
+
+        return Response(data)
 
 class SubscriptionViewSet(mixins.ListModelMixin,
                           mixins.RetrieveModelMixin,

@@ -14,47 +14,79 @@ def get_financial_overview(user):
 
     today = datetime.today()
     start_of_month = today.replace(day=1, hour=0, minute=0, second=0)
-    
-    # 1. Net Worth: Current Total across all accounts
+
+    # Types that affect profit
+    PROFIT_IN  = ['revenue', 'refund_in']
+    PROFIT_OUT = ['cogs', 'expense', 'refund_out']
+
+    # 1. Net Worth: sum of ALL account balances (capital included)
     net_worth = qs_account.aggregate(total=Sum('balance'))['total'] or 0
 
-    # 2. This Month's Profit: Inflow - Outflow
+    # 2. This Month's Profit
     this_month_tx = qs_transaction.filter(date__gte=start_of_month)
-    inflows = this_month_tx.filter(type='inflow').aggregate(Sum('amount'))['amount__sum'] or 0
-    outflows = this_month_tx.filter(type='outflow').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    inflows  = this_month_tx.filter(
+        type__in=PROFIT_IN
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    outflows = this_month_tx.filter(
+        type__in=PROFIT_OUT
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
     total_profit = inflows - outflows
-    
-    # 3. Last Month's Profit (for comparison)
-    last_month_start = (start_of_month - relativedelta(months=1))
-    last_month_end = start_of_month - relativedelta(seconds=1)
-    last_month_tx = qs_transaction.filter(date__range=[last_month_start, last_month_end])
-    
-    inflows_last = last_month_tx.filter(type='inflow').aggregate(Sum('amount'))['amount__sum'] or 0
-    outflows_last = last_month_tx.filter(type='outflow').aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # 3. This Month's Expenses only
+    total_expenses = this_month_tx.filter(
+        type='expense'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    # 4. Last Month's Profit (for comparison)
+    last_month_start = start_of_month - relativedelta(months=1)
+    last_month_end   = start_of_month - relativedelta(seconds=1)
+    last_month_tx    = qs_transaction.filter(
+        date__range=[last_month_start, last_month_end]
+    )
+
+    inflows_last  = last_month_tx.filter(
+        type__in=PROFIT_IN
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    outflows_last = last_month_tx.filter(
+        type__in=PROFIT_OUT
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
+    expenses_last = last_month_tx.filter(
+        type='expense'
+    ).aggregate(Sum('amount'))['amount__sum'] or 0
+
     profit_last = inflows_last - outflows_last
 
-    # 4. Correct Net Worth Change
-    # To find last month's net worth: Current Net Worth minus this month's net change
-    net_change_this_month = inflows - outflows
-    prev_net_worth = net_worth - net_change_this_month
+    # 5. Net Worth last month estimate
+    # Current net worth minus this month's net profit change
+    prev_net_worth = net_worth - total_profit
 
-    # Percentage Calculations
+    # 6. Percentage Calculations
     def calc_change(current, previous):
-        if not previous or previous == 0: return 0
+        if not previous or previous == 0:
+            return 0
         return ((current - previous) / abs(previous)) * 100
 
-    nw_change = calc_change(net_worth, prev_net_worth)
-    profit_change = calc_change(total_profit, profit_last)
-    exp_change = calc_change(outflows, outflows_last)
+    nw_change      = calc_change(net_worth,     prev_net_worth)
+    profit_change  = calc_change(total_profit,  profit_last)
+    exp_change     = calc_change(total_expenses, expenses_last)
+
+    bank_balance = qs_account.filter(
+        account_type='bank'
+    ).aggregate(Sum('balance'))['balance__sum'] or 0
 
     return {
-        "netWorth": f"${net_worth:,.2f}",
-        "totalProfit": f"${total_profit:,.2f}",
-        "totalExpenses": f"${outflows:,.2f}",
-        "bankBalance": f"${qs_account.filter(account_type='bank').aggregate(Sum('balance'))['balance__sum'] or 0:,.2f}",
-        "netWorthChange": f"{'+' if nw_change >=0 else ''}{nw_change:.1f}% from last month",
-        "totalProfitChange": f"{'+' if profit_change >=0 else ''}{profit_change:.1f}% from last month",
-        "totalExpensesChange": f"{'+' if exp_change >=0 else ''}{exp_change:.1f}% from last month",
+        "netWorth":            f"${net_worth:,.2f}",
+        "totalProfit":         f"${total_profit:,.2f}",
+        "totalExpenses":       f"${total_expenses:,.2f}",
+        "bankBalance":         f"${bank_balance:,.2f}",
+        "netWorthChange":      f"{'+' if nw_change >= 0 else ''}{nw_change:.1f}% from last month",
+        "totalProfitChange":   f"{'+' if profit_change >= 0 else ''}{profit_change:.1f}% from last month",
+        "totalExpensesChange": f"{'+' if exp_change >= 0 else ''}{exp_change:.1f}% from last month",
     }
 
 def get_business_kpis(user):

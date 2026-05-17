@@ -51,7 +51,14 @@ export default function ChoosePlan() {
   }, [payModalOpen])
 
 const redirectToDashboard = async () => {
-  await queryClient.invalidateQueries({ queryKey: ['accessStatus'] })
+  await queryClient.fetchQuery({ 
+    queryKey: ['accessStatus'],
+    queryFn: async () => {
+      const res = await api.get('/subscriptions/me/access-status/')
+      return res.data
+    }
+  })
+  
   navigate('/dashboard', { replace: true })
 }
 

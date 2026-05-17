@@ -24,31 +24,43 @@ from .serializers import (SubscriptionPlanSerializer,
                           AccessStatusSerializer)
 
 
-@method_decorator(cache_page(60 * 10), name='dispatch') 
 class SubscriptionPlanViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = SubscriptionPlanSerializer
     queryset = SubscriptionPlan.objects.prefetch_related('features')
     permission_classes = [AllowAny]
 
     def list(self, request, *args, **kwargs):
-        plans = list(self.get_queryset())
+        cache_key = "subscription_plans_public"
 
-        all_features = list(Feature.objects.all())
+        # Try cache first
+        data = cache.get(cache_key)
 
-        plan_features_map = {}
-        for plan in plans:
-            plan_features_map[plan.id] = {f.id for f in plan.features.all()}
+        if data is None:
+            # First time or cache expired
+            plans = list(self.get_queryset())
 
-        serializer = self.get_serializer(
-            plans, 
-            many=True, 
-            context={
-                'request': request,
-                'all_features': all_features,
-                'plan_features_map': plan_features_map
-            }
-        )
-        return Response(serializer.data)
+            all_features = list(Feature.objects.all().order_by('id'))  # added order_by for consistency
+
+            plan_features_map = {}
+            for plan in plans:
+                plan_features_map[plan.id] = {f.id for f in plan.features.all()}
+
+            serializer = self.get_serializer(
+                plans, 
+                many=True, 
+                context={
+                    'request': request,
+                    'all_features': all_features,
+                    'plan_features_map': plan_features_map
+                }
+            )
+            data = serializer.data
+
+            # Cache for 10 minutes
+            cache.set(cache_key, data, timeout=600)
+
+        return Response(data)
+    
 
 class SubscriptionViewSet(mixins.ListModelMixin,
                           mixins.RetrieveModelMixin,

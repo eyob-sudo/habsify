@@ -3,38 +3,28 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api, { setGlobalAccessStatus } from '../services/api'
 import { motion, AnimatePresence } from 'framer-motion'
+import { useQuery } from '@tanstack/react-query'
 
 export default function ProtectedRoute() {
   const { isAuthenticated, loading } = useAuth()
-  const [access, setAccess] = useState(null)
-  const [checkingAccess, setCheckingAccess] = useState(true)
   const location = useLocation()
 
-  useEffect(() => {
-    let mounted = true
-    async function checkAccess() {
-      if (!isAuthenticated) {
-        if (mounted) setCheckingAccess(false)
-        return
-      }
-      try {
-        const res = await api.get('/subscriptions/me/access-status/')
-        if (mounted) {
-          setAccess(res.data)
-          setGlobalAccessStatus(res.data)
-        }
-      } catch (err) {
-        console.error('Failed to get access status', err)
-      } finally {
-        if (mounted) setCheckingAccess(false)
-      }
-    }
-    setCheckingAccess(true)
-    checkAccess()
-    return () => { mounted = false }
-  }, [isAuthenticated, location.pathname])
+  const { data: access, isFetching: checkingAccess } = useQuery({
+    queryKey: ['accessStatus', location.pathname],
+    queryFn: async () => {
+      const res = await api.get('/subscriptions/me/access-status/')
+      setGlobalAccessStatus(res.data)
+      return res.data
+    },
+    enabled: isAuthenticated,
+    staleTime: 15 * 1000 // Cache for 15s to be performant yet strict
+  })
 
-  if (loading || checkingAccess) {
+  // We only show full-screen loader if the auth state itself is loading
+  // or if we are actively checking access and there's NO cached data yet to render.
+  const isBlockingLoad = loading || (checkingAccess && !access)
+
+  if (isBlockingLoad) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
         <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>

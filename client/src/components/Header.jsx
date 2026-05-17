@@ -1,59 +1,48 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { getUnreadCount } from '../services/notificationService'
 import ProfileModal from './ProfileModal'
 import api from '../services/api'
+import { useQuery } from '@tanstack/react-query'
 
 export default function Header() {
   const navigate = useNavigate()
   const { logout } = useAuth()
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [profileOpen, setProfileOpen] = useState(false)
-  const [unreadCount, setUnreadCount] = useState(0)
-  const [avatarUrl, setAvatarUrl] = useState('')
-  const [userInitial, setUserInitial] = useState('H')
   const buttonRef = useRef(null)
   const dropdownRef = useRef(null)
 
-  useEffect(() => {
-    let alive = true
-    getUnreadCount()
-      .then((data) => {
-        if (!alive) return
-        setUnreadCount(Number(data?.unread_count || 0))
-      })
-      .catch(() => {
-        if (!alive) return
-        setUnreadCount(0)
-      })
-    return () => {
-      alive = false
-    }
-  }, [])
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ['unreadCount'],
+    queryFn: async () => {
+      const data = await getUnreadCount()
+      return Number(data?.unread_count || 0)
+    },
+    staleTime: 30 * 1000, // cache for 30s so it doesn't refetch on every page nav
+    refetchInterval: 30000 // keeps polling but in a controlled manner
+  })
 
-  useEffect(() => {
-    let alive = true
-    async function loadUser() {
-      try {
-        const res = await api.get('/accounts/user/')
-        const data = res?.data ?? res
-        const user = Array.isArray(data) ? data[0] : data
-        if (!alive || !user) return
-        const initial = (user.username || user.email || 'U').toString().trim()[0] || 'U'
-        setUserInitial(initial.toUpperCase())
-        if (user.avatar) {
-          const base = api.defaults.baseURL?.replace(/\/$/, '') || ''
-          const path = user.avatar.startsWith('http') ? user.avatar : `${base}/${user.avatar}`
-          setAvatarUrl(path)
-        }
-      } catch (err) {
-        if (alive) setAvatarUrl('')
-      }
-    }
-    loadUser()
-    return () => { alive = false }
-  }, [])
+  const { data: userRaw } = useQuery({
+    queryKey: ['accountsUser'],
+    queryFn: async () => {
+      const res = await api.get('/accounts/user/')
+      return Array.isArray(res?.data) ? res.data[0] : (res?.data ?? res)
+    },
+    staleTime: 5 * 60 * 1000 // cache for 5 min
+  })
+
+  const userInitial = useMemo(() => {
+    if (!userRaw) return 'U'
+    return (userRaw.username || userRaw.email || 'U').toString().trim()[0].toUpperCase()
+  }, [userRaw])
+
+  const avatarUrl = useMemo(() => {
+    if (!userRaw?.avatar) return ''
+    const base = api.defaults.baseURL?.replace(/\/$/, '') || ''
+    return userRaw.avatar.startsWith('http') ? userRaw.avatar : `${base}/${userRaw.avatar}`
+  }, [userRaw])
 
   useEffect(() => {
     function onDoc(e) {
@@ -87,14 +76,14 @@ export default function Header() {
           <Link to="/tasks" className="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
             <i className="ri-task-line ri-lg"></i>
           </Link>
-          <a href="/notifications" className="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors relative">
+          <Link to="/notifications" className="w-10 h-10 bg-gray-100 text-gray-600 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors relative">
             <i className="ri-notification-3-line ri-lg"></i>
             {unreadCount > 0 && (
               <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 bg-red-500 text-white text-[10px] leading-[18px] text-center rounded-full">
                 {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
-          </a>
+          </Link>
           <div className="relative">
             <button
               ref={buttonRef}

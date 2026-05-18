@@ -51,30 +51,31 @@ export default function ChoosePlan() {
 
 const redirectToDashboard = async () => {
   try {
+    queryClient.removeQueries({ queryKey: ['accessStatus'] })
+
     const freshData = await queryClient.fetchQuery({
-      queryKey: ['accessStatus', Date.now()], 
+      queryKey: ['accessStatus'],
       queryFn: async () => {
-        const res = await api.get(`/subscriptions/me/access-status/?_t=${Date.now()}`, {
-          headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-          }
-        });
-        setGlobalAccessStatus(res.data);
-        return res.data;
+        const res = await api.get('/subscriptions/me/access-status/', {
+          headers: { 'Cache-Control': 'no-cache' }
+        })
+        setGlobalAccessStatus(res.data)
+        return res.data
       },
       staleTime: 0,
-      cacheTime: 0,
-    });
+      gcTime: 0,
+    })
 
     if (freshData?.can_enter_app) {
-      navigate('/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true })
+    } else {
+      toast.error('Access not ready yet. Please refresh.')
     }
   } catch (err) {
-    console.error(err);
-    navigate('/dashboard', { replace: true });
+    console.error(err)
+    toast.error('Something went wrong. Please refresh.')
   }
-};
+}
 
 const handleStartTrial = async (planId) => {
   setProcessing(planId)

@@ -48,15 +48,21 @@ export default function Login() {
     defaultValues: { email: '' }
   })
 
-  async function onLogin(data) {
-    try {
-      await login(data)
-      toast.success('Login successful')
-      navigate('/dashboard', { replace: true })
-    } catch (err) {
-      toast.error('Login failed')
-    }
+// add queryClient
+const queryClient = useQueryClient()
+
+async function onLogin(data) {
+  try {
+    await login(data)
+
+    queryClient.removeQueries({ queryKey: ['accessStatus'] })
+
+    toast.success('Login successful')
+    navigate('/dashboard', { replace: true })
+  } catch (err) {
+    toast.error('Login failed')
   }
+}
 
   async function onResend(data) {
     setResendStatus('')

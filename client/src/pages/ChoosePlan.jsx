@@ -59,28 +59,43 @@ const redirectToDashboard = async () => {
   isRedirecting.current = true
 
   try {
-    queryClient.removeQueries({ queryKey: ['accessStatus'] })
+    let retries = 0
+    const maxRetries = 5
+    let freshData = null
 
-    const freshData = await queryClient.fetchQuery({
-      queryKey: ['accessStatus'],
-      queryFn: async () => {
-        const res = await api.get('/subscriptions/me/access-status/')
-        setGlobalAccessStatus(res.data)
-        return res.data
-      },
-      staleTime: 0,
-      gcTime: 0,
-    })
+    // Loop to fetch fresh access status
+    while (retries < maxRetries) {
+      queryClient.removeQueries({ queryKey: ['accessStatus'] })
+
+      freshData = await queryClient.fetchQuery({
+        queryKey: ['accessStatus'],
+        queryFn: async () => {
+          const res = await api.get('/subscriptions/me/access-status/')
+          return res.data
+        },
+        staleTime: 0,
+        gcTime: 0,
+      })
+
+      if (freshData?.can_enter_app === true) {
+        break // Success! Exit loop early
+      }
+
+      retries++
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
 
     if (freshData?.can_enter_app) {
+      setGlobalAccessStatus(freshData)
+      
       window.location.replace('/dashboard')
     } else {
-      toast.error('Access not ready yet. Please refresh.')
+      toast.error('Setup is taking slightly longer. Please refresh.')
       isRedirecting.current = false
     }
   } catch (err) {
-    console.error(err)
-    toast.error('Something went wrong. Please refresh.')
+    console.error('Redirect failed:', err)
+    toast.error('Something went wrong. Please refresh the page.')
     isRedirecting.current = false
   }
 }

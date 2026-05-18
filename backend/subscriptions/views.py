@@ -5,7 +5,7 @@ from rest_framework import viewsets,mixins,generics
 from rest_framework.permissions import IsAuthenticated,AllowAny
 from rest_framework.decorators import action
 from django.core.cache import cache
-from django.views.decorators.cache import cache_page
+from django.views.decorators.cache import cache_page, never_cache
 from django.utils.decorators import method_decorator
 from rest_framework import status
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -131,7 +131,7 @@ class BankAccountViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = BankAccountSerializer
     permission_classes = [IsAuthenticated]
 
-
+@method_decorator(never_cache, name='dispatch')
 class AccessStatusView(APIView):
     permission_classes = [IsAuthenticated]
 

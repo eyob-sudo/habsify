@@ -54,73 +54,70 @@ export default function ChoosePlan() {
   }, [payModalOpen])
 
   // ─── SAFE RETRY LOGIC (WAITS FOR BACKEND DB TO FINISH SAVING) ───
-  const redirectToDashboard = async () => {
-    if (isRedirecting.current) return
-    isRedirecting.current = true
+const redirectToDashboard = async () => {
+  if (isRedirecting.current) return
+  isRedirecting.current = true
 
-    const toastId = toast.loading('Verifying your workspace access...')
+  const toastId = toast.loading('Verifying your workspace access...')
 
-    try {
-      let retries = 0
-      const maxRetries = 5
-      let freshData = null
+  try {
+    let retries = 0
+    const maxRetries = 5
+    let freshData = null
 
-      // Loop up to 5 times to wait for the database to finish updating status
-      while (retries < maxRetries) {
-        queryClient.removeQueries({ queryKey: ['accessStatus'] })
+    while (retries < maxRetries) {
+      queryClient.removeQueries({ queryKey: ['accessStatus'] })
 
-        freshData = await queryClient.fetchQuery({
-          queryKey: ['accessStatus'],
-          queryFn: async () => {
-            const res = await api.get('/subscriptions/me/access-status/') // ✅ NO special headers to avoid CORS preflight crashes
-            return res.data
-          },
-          staleTime: 0,
-          gcTime: 0,
-        })
+      freshData = await queryClient.fetchQuery({
+        queryKey: ['accessStatus'],
+        queryFn: async () => {
+          const res = await api.get('/subscriptions/me/access-status/')
+          return res.data
+        },
+        staleTime: 0,
+        gcTime: 0,
+      })
 
-        if (freshData?.can_enter_app === true) {
-          break // Success! Exit loop early
-        }
+      // ✅ ADD THIS — see exactly what backend returns each retry
+      console.log(`Retry ${retries}:`, JSON.stringify(freshData, null, 2))
 
-        retries++
-        await new Promise(resolve => setTimeout(resolve, 500)) // Silent 500ms delay before retrying
-      }
+      if (freshData?.can_enter_app === true) break
 
-      if (freshData?.can_enter_app) {
-        setGlobalAccessStatus(freshData)
-        
-        toast.update(toastId, {
-          render: 'Workspace ready! Redirecting...',
-          type: 'success',
-          isLoading: false,
-          autoClose: 1500
-        })
+      retries++
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
 
-        setTimeout(() => {
-          window.location.replace('/dashboard') // Hard replace clears react-query caches completely
-        }, 1200)
-
-      } else {
-        toast.update(toastId, {
-          render: 'Setup is taking slightly longer. Please refresh the page.',
-          type: 'error',
-          isLoading: false,
-          autoClose: 4000
-        })
-        isRedirecting.current = false
-      }
-    } catch (err) {
-      console.error('Redirect failed:', err)
+    if (freshData?.can_enter_app) {
+      setGlobalAccessStatus(freshData)
       toast.update(toastId, {
-        render: 'Something went wrong. Please refresh the page.',
+        render: 'Workspace ready! Redirecting...',
+        type: 'success',
+        isLoading: false,
+        autoClose: 1500
+      })
+      setTimeout(() => window.location.replace('/dashboard'), 1200)
+    } else {
+      // ✅ ADD THIS — see final state after all retries
+      console.log('FINAL freshData after all retries:', freshData)
+      toast.update(toastId, {
+        render: 'Setup is taking slightly longer. Please refresh.',
         type: 'error',
         isLoading: false,
-        autoClose: 3000
+        autoClose: 4000
       })
       isRedirecting.current = false
     }
+  } catch (err) {
+    console.error('Redirect error:', err)
+    toast.update(toastId, {
+      render: 'Something went wrong. Please refresh.',
+      type: 'error',
+      isLoading: false,
+      autoClose: 3000
+    })
+    isRedirecting.current = false
   }
+}
 
   // ─── START TRIAL EVENT HANDLER ───
   const handleStartTrial = async (planId) => {

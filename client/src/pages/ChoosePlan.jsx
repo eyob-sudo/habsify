@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { getSubscriptionPlans, startFreeTrial, getPaymentMethods, getBankAccounts, subscribeAndPay } from '../services/subscriptionService'
 import toast from '../services/toastService'
 import api, { setGlobalAccessStatus } from '../services/api' 
+import { useRef } from 'react';
 
 export default function ChoosePlan() {
   const { user } = useAuth()

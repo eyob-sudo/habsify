@@ -51,35 +51,62 @@ export default function ChoosePlan() {
 
 const redirectToDashboard = async () => {
   try {
-    const freshData = await queryClient.fetchQuery({
-      queryKey: ['accessStatus'],
-      queryFn: async () => {
-        const res = await api.get('/subscriptions/me/access-status/', {
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-            'Expires': '0'
-          },
+    // Show one loading message — don't spam toasts
+    const toastId = toast.loading('Starting your trial...')
+
+    // Retry logic runs silently in background
+    const freshData = await new Promise((resolve, reject) => {
+      let retries = 0
+      const maxRetries = 5
+      const delay = 300
+
+      const attemptFetch = () => {
+        api.get('/subscriptions/me/access-status/', {
+          headers: { 'Cache-Control': 'no-cache' },
           cache: 'no-store'
         })
-        
-        setGlobalAccessStatus(res.data)
-        return res.data
-      },
-      staleTime: 0,
-      cacheTime: 0,
+          .then(res => {
+            if (res.data?.can_enter_app === true) {
+              resolve(res.data)
+            } else if (retries < maxRetries) {
+              retries++
+              setTimeout(attemptFetch, delay)
+            } else {
+              reject(new Error('Max retries reached'))
+            }
+          })
+          .catch(() => {
+            if (retries < maxRetries) {
+              retries++
+              setTimeout(attemptFetch, delay)
+            } else {
+              reject(new Error('Network failed after retries'))
+            }
+          })
+      }
+
+      attemptFetch()
     })
 
-    if (freshData?.can_enter_app === true) {
-      toast.success('Redirecting to dashboard...')
-      navigate('/dashboard', { replace: true })
-    } else {
-      toast.error("Trial started but still seeing NO_PLAN. Please refresh page.")
-      console.log("Fresh data received:", freshData)
-    }
-  } catch (err) {
-    console.error("Access status fetch failed:", err)
+    // Success!
+    toast.update(toastId, {
+      render: 'Trial started! Redirecting...',
+      type: 'success',
+      isLoading: false,
+      autoClose: 1500
+    })
+
+    // Update cache so dashboard sees correct status
+    queryClient.setQueryData(['accessStatus'], freshData)
+    setGlobalAccessStatus(freshData)
+
+    // Navigate
     navigate('/dashboard', { replace: true })
+
+  } catch (err) {
+    // Only show error if everything failed
+    toast.error('Something went wrong. Please refresh the page.')
+    console.error('Final access status fetch failed:', err)
   }
 }
 

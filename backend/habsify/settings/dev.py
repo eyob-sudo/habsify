@@ -53,3 +53,4 @@ EMAIL_TIMEOUT = 30
 # INTERNAL_IPS = ["127.0.0.1"]
 
 print("🟢   Loaded DEV settings")
+CACHE_MIDDLEWARE_SECONDS = 0

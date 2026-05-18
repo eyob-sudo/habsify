@@ -1,5 +1,6 @@
 from pathlib import Path
 from datetime import timedelta
+from urllib import response
 from decouple import config
 from celery.schedules import crontab
 from corsheaders.defaults import default_headers
@@ -55,8 +56,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    'django.middleware.cache.UpdateCacheMiddleware',
-    'django.middleware.cache.FetchFromCacheMiddleware',
 ]
 
 ROOT_URLCONF = "habsify.urls"
@@ -182,13 +181,6 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"]
 CORS_ALLOW_HEADERS = list(default_headers) + ["authorization", "content-type"]
 
-CACHES = {
-    "default": {
-        # "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        # 'TIMEOUT': 300,
-        "BACKEND": "django.core.cache.backends.dummy.DummyCache",
-    }
-}
 
 SILENCED_SYSTEM_CHECKS = ["django_ratelimit.E003", "django_ratelimit.W001"]
 
@@ -204,3 +196,4 @@ LOGGING = {
         "account": {"handlers": ["console"], "level": "INFO"},
     },
 }
+CACHE_MIDDLEWARE_SECONDS = 0

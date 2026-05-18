@@ -59,6 +59,7 @@ const redirectToDashboard = async () => {
         const res = await api.get('/subscriptions/me/access-status/', {
           headers: { 'Cache-Control': 'no-cache' }
         })
+
         setGlobalAccessStatus(res.data)
         return res.data
       },
@@ -67,7 +68,7 @@ const redirectToDashboard = async () => {
     })
 
     if (freshData?.can_enter_app) {
-      navigate('/dashboard', { replace: true })
+      window.location.replace('/dashboard')
     } else {
       toast.error('Access not ready yet. Please refresh.')
     }

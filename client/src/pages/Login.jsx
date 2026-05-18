@@ -59,7 +59,6 @@ async function onLogin(data) {
     queryClient.removeQueries({ queryKey: ['accessStatus'] })
 
     toast.success('Login successful')
-    navigate('/dashboard', { replace: true })
   } catch (err) {
     toast.error('Login failed')
   }

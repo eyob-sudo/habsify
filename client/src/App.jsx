@@ -1,5 +1,5 @@
 import React from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Dashboard from './pages/Dashboard'
 import CRM from './pages/CRM'
 import CustomerProfile from './pages/CustomerProfile'
@@ -28,35 +28,37 @@ import ChoosePlan from './pages/ChoosePlan'
 
 export default function App() {
   return (
-    <>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/signup" element={<Signup />} />
-        <Route path="/otp-verify" element={<OtpVerify />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route path="/accounts/activate/:uid/:token" element={<ActivateAccount />} />
-        <Route element={<ProtectedRoute />}>
-          <Route path="/choose-plan" element={<ChoosePlan />} />
-          <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/crm" element={<CRM />} />
-          <Route path="/crm/customer/:id" element={<CustomerProfile />} />
-          <Route path="/suppliers" element={<Suppliers />} />
-          <Route path="/suppliers/supplier/:id" element={<SupplierProfile />} />
-          <Route path="/inventory" element={<Inventory />} />
-          <Route path="/inventory/items" element={<InventoryItems />} />
-          <Route path="/inventory/stock-movements" element={<InventoryStockMovements />} />
-          <Route path="/inventory/categories" element={<InventoryCategories />} />
-          <Route path="/inventory/:id" element={<InventoryTable />} />
-          <Route path="/finance" element={<Finance />} />
-          <Route path="/finance/cash" element={<FinanceTable />} />
-          <Route path="/notifications" element={<Notifications />} />
-          <Route path="/tasks" element={<Tasks />} />
-          <Route path="/subscription" element={<Subscription />} />
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </>
+    <Routes>
+      {/* ─── Public routes ─── */}
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
+      <Route path="/otp-verify" element={<OtpVerify />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/reset-password" element={<ResetPassword />} />
+      <Route path="/accounts/activate/:uid/:token" element={<ActivateAccount />} />
+
+      {/* ─── Protected routes ─── */}
+      <Route element={<ProtectedRoute />}>
+        <Route path="/choose-plan" element={<ChoosePlan />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/crm" element={<CRM />} />
+        <Route path="/crm/customer/:id" element={<CustomerProfile />} />
+        <Route path="/suppliers" element={<Suppliers />} />
+        <Route path="/suppliers/supplier/:id" element={<SupplierProfile />} />
+        <Route path="/inventory" element={<Inventory />} />
+        <Route path="/inventory/items" element={<InventoryItems />} />
+        <Route path="/inventory/stock-movements" element={<InventoryStockMovements />} />
+        <Route path="/inventory/categories" element={<InventoryCategories />} />
+        <Route path="/inventory/:id" element={<InventoryTable />} />
+        <Route path="/finance" element={<Finance />} />
+        <Route path="/finance/cash" element={<FinanceTable />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/tasks" element={<Tasks />} />
+        <Route path="/subscription" element={<Subscription />} />
+      </Route>
+
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }

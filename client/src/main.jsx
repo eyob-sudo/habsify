@@ -7,13 +7,14 @@ import App from './App'
 import { AuthProvider } from './context/AuthContext'
 import './index.css'
 
-// React Query client
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       refetchOnWindowFocus: false,
       retry: 1,
-      staleTime: 5 * 60 * 1000,
+      staleTime: 60 * 1000,        
+      gcTime: 5 * 60 * 1000,       
+      refetchOnMount: true,         
     },
   },
 })
@@ -34,9 +35,7 @@ createRoot(document.getElementById('root')).render(
           <App />
         </AuthProvider>
       </BrowserRouter>
-
       <Toaster position="top-right" richColors closeButton theme="light" />
-
       <ReactQueryDevtools initialIsOpen={false} position="bottom-right" />
     </QueryClientProvider>
   </React.StrictMode>

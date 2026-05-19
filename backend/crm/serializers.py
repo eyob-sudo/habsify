@@ -7,8 +7,6 @@ from django.db.models import Sum, Q
 from finance.models import Transaction  
 
 
-
-
 class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
     units = serializers.SerializerMethodField()
     product_name = serializers.CharField(source="item.name", read_only=True)
@@ -22,57 +20,58 @@ class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Sale
         fields = [
-            'id',
-            'date',
-            'units',
-            'product_name',
-            'product_code',
-            'product_price',
-            'payable',
-            'payment_received',
-            'bank',
-            'remain'
+            'id', 'date', 'units', 'product_name',
+            'product_code', 'product_price', 'payable',
+            'payment_received', 'bank', 'remain'
         ]
 
     def get_units(self, obj):
-        return f"{obj.quantity} {getattr(obj.item, 'unit_measure', '')}" 
+        return f"{obj.quantity} {getattr(obj.item, 'unit_measure', '')}"
 
-    def get_product_code(self,obj):
+    def get_product_code(self, obj):
         return obj.item.code if obj.item else "N/A"
-    
-    def get_product_price(self,obj):
-        return  float(obj.unit_price)
-    
-    def get_payable(self,obj):
-        return  float(obj.total)
-    
+
+    def get_product_price(self, obj):
+        return float(obj.unit_price)
+
+    def get_payable(self, obj):
+        return float(obj.total)
+
     def get_payment_received(self, obj):
-        payments = obj.transactions.all().order_by('date')
-        if not payments:
+        payments = obj.transactions.select_related('account').order_by('date')
+        if not payments.exists():
             return "0"
 
         parts = []
         for t in payments:
-            sign = "+" if t.type == 'inflow' else "-"
+            if t.type == 'revenue':
+                sign = "+"
+            elif t.type == 'refund_out':
+                sign = "-"
+            else:
+                continue  # skip expense/capital/cogs - not related to this sale
             bank_name = t.account.name if t.account else "Unknown"
             date_str = t.date.strftime('%Y-%m-%d')
             parts.append(f"{sign}{t.amount} via {bank_name} on {date_str}")
 
-        return ', '.join(parts)
+        return ', '.join(parts) if parts else "0"
 
-    def get_bank(self,obj):
-        payments = obj.transactions.all().order_by('date')
-        return ', '.join(set([t.account.name for t in payments if t.account])) if payments else "N/A"
-    
-    def get_remain(self, obj):
-        agg = obj.transactions.aggregate(  
-            inflows=Sum('amount', filter=Q(type='inflow')),
-            outflows=Sum('amount', filter=Q(type='outflow')),
+    def get_bank(self, obj):
+        payments = obj.transactions.select_related('account').filter(
+            type__in=['revenue', 'refund_out']
         )
-        inflows = agg['inflows'] or 0
-        outflows = agg['outflows'] or 0
-        net_paid = inflows - outflows
-        return float(obj.total - net_paid)
+        banks = set(t.account.name for t in payments if t.account)
+        return ', '.join(banks) if banks else "N/A"
+
+    def get_remain(self, obj):
+        agg = obj.transactions.aggregate(
+            total_received=Sum('amount', filter=Q(type='revenue')),
+            total_refunded=Sum('amount', filter=Q(type='refund_out')),
+        )
+        total_received = agg['total_received'] or 0
+        total_refunded = agg['total_refunded'] or 0
+        net_received = total_received - total_refunded
+        return float(obj.total - net_received)
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -81,18 +80,10 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = [
-            'id',
-            'name',
-            'phone',
-            'address',
-            'products_count',
-            'balance',
-            'notes',
-        ]
+        fields = ['id', 'name', 'phone', 'address', 'products_count', 'balance', 'notes']
 
     def validate(self, attrs):
-        if self.instance: 
+        if self.instance:
             return attrs
         company = self.context["request"].user.company
         check_plan_limit(company)
@@ -112,21 +103,18 @@ class CustomerSerializer(serializers.ModelSerializer):
 
         sale_ids = sales_qs.values_list('id', flat=True)
 
-        transaction_agg = Transaction.objects.filter(
+        agg = Transaction.objects.filter(
             linked_sale__in=sale_ids
         ).aggregate(
-            inflows=Sum('amount', filter=Q(type='inflow')),
-            outflows=Sum('amount', filter=Q(type='outflow')),
+            total_received=Sum('amount', filter=Q(type='revenue')),
+            total_refunded=Sum('amount', filter=Q(type='refund_out')),
         )
 
-        inflows = transaction_agg['inflows'] or 0
-        outflows = transaction_agg['outflows'] or 0
+        total_received = agg['total_received'] or 0
+        total_refunded = agg['total_refunded'] or 0
+        net_received = total_received - total_refunded
 
-        net_paid = inflows - outflows
-        balance = total_payable - net_paid
-
-        return float(balance)  
-
+        return float(total_payable - net_received)
 
 class InteractionSerializer(serializers.ModelSerializer):
     class Meta:

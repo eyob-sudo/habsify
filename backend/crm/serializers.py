@@ -1,10 +1,10 @@
+from decimal import Decimal
 from rest_framework import serializers
 from sales_purchases.models import Sale
 from crm.limits import check_plan_limit
-from .models import Customer,Interaction
-from django.db.models import Sum
+from .models import Customer, Interaction
 from django.db.models import Sum, Q
-from finance.models import Transaction  
+from finance.models import Transaction
 
 
 class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
@@ -49,7 +49,7 @@ class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
             elif t.type == 'refund_out':
                 sign = "-"
             else:
-                continue  # skip expense/capital/cogs - not related to this sale
+                continue  # skip cogs/expense/capital - not related to sale
             bank_name = t.account.name if t.account else "Unknown"
             date_str = t.date.strftime('%Y-%m-%d')
             parts.append(f"{sign}{t.amount} via {bank_name} on {date_str}")
@@ -68,10 +68,10 @@ class CustomerTransactionHistorySerializer(serializers.ModelSerializer):
             total_received=Sum('amount', filter=Q(type='revenue')),
             total_refunded=Sum('amount', filter=Q(type='refund_out')),
         )
-        total_received = agg['total_received'] or 0
-        total_refunded = agg['total_refunded'] or 0
+        total_received = agg['total_received'] or Decimal('0')  
+        total_refunded = agg['total_refunded'] or Decimal('0') 
         net_received = total_received - total_refunded
-        return float(obj.total - net_received)
+        return float(obj.total - net_received)  # Decimal - Decimal = OK
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -80,7 +80,10 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'phone', 'address', 'products_count', 'balance', 'notes']
+        fields = [
+            'id', 'name', 'phone', 'address',
+            'products_count', 'balance', 'notes'
+        ]
 
     def validate(self, attrs):
         if self.instance:
@@ -92,14 +95,16 @@ class CustomerSerializer(serializers.ModelSerializer):
     def get_products_count(self, obj):
         if not obj.company:
             return 0
-        return obj.sales.filter(company=obj.company).values('item').distinct().count()
+        return obj.sales.filter(
+            company=obj.company
+        ).values('item').distinct().count()
 
     def get_balance(self, obj):
         sales_qs = obj.sales.filter(company=obj.company)
 
         total_payable = sales_qs.aggregate(
             total=Sum('total')
-        )['total'] or 0
+        )['total'] or Decimal('0') 
 
         sale_ids = sales_qs.values_list('id', flat=True)
 
@@ -110,11 +115,11 @@ class CustomerSerializer(serializers.ModelSerializer):
             total_refunded=Sum('amount', filter=Q(type='refund_out')),
         )
 
-        total_received = agg['total_received'] or 0
-        total_refunded = agg['total_refunded'] or 0
+        total_received = agg['total_received'] or Decimal('0')  
+        total_refunded = agg['total_refunded'] or Decimal('0')  
         net_received = total_received - total_refunded
 
-        return float(total_payable - net_received)
+        return float(total_payable - net_received)  
 
 class InteractionSerializer(serializers.ModelSerializer):
     class Meta:

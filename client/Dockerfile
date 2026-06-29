@@ -1,17 +1,29 @@
 FROM node:20-alpine AS builder
 WORKDIR /app
 
-COPY package.json package-lock.json* ./
-RUN npm install
+# Copy package files first (better caching)
+COPY package*.json ./
+RUN npm ci --only=production=false
 
+# Copy source code
 COPY . .
+
+# Build the app
 RUN npm run build
 
-FROM nginx:stable-alpine
-RUN rm -rf /usr/share/nginx/html/*
-COPY --from=builder /app/dist /usr/share/nginx/html
+# Production stage
+FROM node:20-alpine AS production
 
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Install serve
+RUN npm install -g serve
+
+# Copy built files from builder stage
+COPY --from=builder /app/build ./build
+
+# Expose port
+EXPOSE 3000
+
+# Start command
+CMD ["serve", "-s", "build", "-l", "3000"]

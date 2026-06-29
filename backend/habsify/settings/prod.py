@@ -21,6 +21,17 @@ DATABASES = {
     )
 }
 
+# Fallback / override with individual vars if URL is broken
+if not DATABASES["default"].get("NAME"):
+    DATABASES["default"] = {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.environ.get("PGDATABASE", "railway"),
+        "USER": os.environ.get("PGUSER", "postgres"),
+        "PASSWORD": os.environ.get("PGPASSWORD"),
+        "HOST": os.environ.get("PGHOST"),           
+        "PORT": os.environ.get("PGPORT", "5432"),
+        "OPTIONS": {"sslmode": "require"},
+    }
 # Force SSL for Azure
 DATABASES["default"].setdefault("OPTIONS", {})["sslmode"] = "require"
 

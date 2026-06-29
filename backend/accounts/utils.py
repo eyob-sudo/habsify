@@ -120,7 +120,7 @@ def send_otp_email(user, otp_code, purpose, request=None):
     email.attach_alternative(html_body, "text/html")
 
     try:
-        email.send(fail_silently=False)
+        email.send(fail_silently=True)
         logger.info(f"OTP email sent successfully to {user.email} for {purpose}")
         return True
     except Exception as e:

@@ -1,6 +1,7 @@
 from .base import *
 import dj_database_url
 import os
+from decouple import config
 
 # CORE
 DEBUG = False

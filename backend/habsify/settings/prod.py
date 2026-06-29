@@ -11,7 +11,7 @@ ALLOWED_HOSTS = config(
     "DJANGO_ALLOWED_HOSTS",
     default="habsifybackend-prod-7a317b11fa8d.herokuapp.com",
 ).split(",")
-
+print("DATABASE_URL =", os.environ.get("DATABASE_URL"))
 # DATABASE — Azure PostgreSQL
 DATABASES = {
     "default": dj_database_url.config(

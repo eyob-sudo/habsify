@@ -106,9 +106,9 @@ LOGIN_FIELD = "email"
 PHONE_COUNTRY_CODE = "251"
 PHONENUMBER_DEFAULT_REGION = None
 
-OTP_EXPIRY_SECONDS = 60 * 60
-OTP_MAX_ATTEMPTS = 5
 OTP_EXPIRY_MINUTES = config("OTP_EXPIRY_MINUTES", default=2, cast=int)
+OTP_EXPIRY_SECONDS = OTP_EXPIRY_MINUTES * 60 
+OTP_MAX_ATTEMPTS = 5
 
 
 REST_FRAMEWORK = {
@@ -148,8 +148,8 @@ DJOSER = {
 
 EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 EMAIL_PORT = config("EMAIL_PORT", default=465, cast=int)
-EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=False, cast=bool)
-EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=bool)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=False, cast=lambda v: v.lower() == 'true')
+EMAIL_USE_SSL = config("EMAIL_USE_SSL", default=True, cast=lambda v: v.lower() == 'true')
 EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default=EMAIL_HOST_USER)

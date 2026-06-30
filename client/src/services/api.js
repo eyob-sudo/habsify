@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getToken } from './authService'
 import { attachGlobalErrorHandler } from './globalErrorHandler'
 
-const API_URL = import.meta.env.VITE_API_URL || "https://habsify-api.up.railway.app";
+const API_URL = import.meta.env.VITE_API_URL || "https://habsify-07ce292dda14.herokuapp.com";
 
 console.log(import.meta.env.VITE_API_URL)
 const api = axios.create({
